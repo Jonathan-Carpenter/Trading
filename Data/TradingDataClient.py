@@ -1,0 +1,51 @@
+import sqlite3
+
+from Model.DailyTicker import DailyTicker
+
+class TradingDataClient:
+    def __init__(self, dbFileLocation: str):
+        self.dbFileLocation = dbFileLocation
+        
+    def ensureSeeded(self):
+        connection = sqlite3.connect(self.dbFileLocation)
+        cursor = connection.cursor()
+        
+        results = cursor.execute("SELECT name FROM sqlite_master")
+        schemaRecords = [result[0] for result in results.fetchall()]
+        
+        if "tickers" in schemaRecords:
+            return
+        
+        print("It looks like your DB has not been seeded. Seed it now? (Y/N)")
+        response = input()
+        
+        if response != "Y":
+            print("Skipped DB seed.")
+            return
+        
+        print("Seeding DB now...")
+
+        cursor.execute("CREATE TABLE tickers(symbol, date, open, close, high, low, volume)")
+        cursor.execute("CREATE UNIQUE INDEX 'ticker_index' ON 'tickers' ('symbol', 'date')")
+        
+        connection.close()
+        
+        print("DB seeding completed.")
+        
+    def addDailyTicker(self, ticker: DailyTicker):        
+        connection = sqlite3.connect(self.dbFileLocation)
+        cursor = connection.cursor()
+        
+        cursor.execute(
+            "INSERT INTO tickers VALUES(?, ?, ?, ?, ?, ?, ?)",
+            (
+                ticker.symbol,
+                ticker.date,
+                ticker.open,
+                ticker.close,
+                ticker.high,
+                ticker.low,
+                ticker.volume))
+        
+        connection.commit()
+        connection.close()
