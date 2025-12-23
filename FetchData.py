@@ -1,6 +1,7 @@
 import configparser
 import massive
 import datetime
+import time
 
 from Massive.ThrottledMassiveClient import ThrottledMassiveClient
 from Data.TradingDataClient import TradingDataClient
@@ -18,10 +19,16 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-results = throttledMassiveClient.getTickerOpenCloseSummary(
-    'GOOGL',
-    datetime.date.fromisoformat('2024-01-01'),
-    datetime.date.fromisoformat('2025-12-20'))
+tickers = ["META", "BA", "BLK", "BAC", "MSFT", "ROK", "TTWO", "VRTX"]
 
-for result in results:
-    dbClient.addDailyTicker(result)
+for ticker in tickers:
+    
+    results = throttledMassiveClient.getTickerOpenCloseSummary(
+        ticker,
+        datetime.date.fromisoformat('2024-01-01'),
+        datetime.date.fromisoformat('2025-12-20'))
+
+    for result in results:
+        dbClient.addDailyTicker(result)
+        
+    time.sleep(12)

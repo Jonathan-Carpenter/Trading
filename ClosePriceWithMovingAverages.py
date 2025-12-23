@@ -6,8 +6,8 @@ import numpy as np
 
 from Massive.ThrottledMassiveClient import ThrottledMassiveClient
 from Data.TradingDataClient import TradingDataClient
-from Model.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
-from Model.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
+from Model.Indicators.IdentityCalculator import IdentityCalculator
+from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
 from typing import NamedTuple, Any
 
 class IndicatorInfo(NamedTuple):
@@ -29,11 +29,14 @@ dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
 startDate = datetime.date.fromisoformat("2024-01-01")
-endDate = datetime.date.fromisoformat("2024-12-31")
+endDate = datetime.date.fromisoformat("2025-11-30")
+
+tickerId = "AAPL"
 
 calculators = [
-    IndicatorInfo(15, "15 Day EMA", ExponentialMovingAverageCalculator()),
-    IndicatorInfo(50, "50 Day EMA", ExponentialMovingAverageCalculator())]
+    IdentityCalculator("Daily close price"),
+    ExponentialMovingAverageCalculator(15, "15 Day EMA"),
+    ExponentialMovingAverageCalculator(50, "50 Day EMA")]
 
 dates = []
 closes = []
@@ -42,7 +45,7 @@ indicators = []
 date = startDate
 
 while date < endDate:
-    ticker = dbClient.getDailyTicker("AAPL", date)
+    ticker = dbClient.getDailyTicker(tickerId, date)
     date += datetime.timedelta(days=1)
     
     if not ticker:
@@ -53,31 +56,15 @@ while date < endDate:
     
 dataCount = len(dates)
 
-for indicatorInfo in calculators:
+for calculator in calculators:
+    indicatorData = calculator.calculate(closes)
+    indicators.append(indicatorData)
     
-    calculatedData = [None]*dataCount
     
-    windowStart = 0
-    windowEnd = indicatorInfo.windowSize
-    
-    while windowEnd < dataCount:
-        
-        window = closes[windowStart:windowEnd]
-        
-        result = indicatorInfo.calculator.calculate(window)
-        
-        calculatedData[windowEnd - 1] = result
-        windowStart += 1
-        windowEnd += 1
-        
-    indicators.append((indicatorInfo.description, calculatedData))
-
-    
-fig, ax = plt.subplots(layout='constrained')
-ax.plot(dates, closes, label="Daily close price")
+fig, ax = plt.subplots(label=f"Close price of {tickerId} with Exponential Moving Averages", layout='constrained')
 
 for indicator in indicators:
-    ax.plot(dates, indicator[1], label=indicator[0])
+    ax.plot(dates, indicator.data, label=indicator.description)
 
 plt.legend(loc="upper left")
 plt.show()
