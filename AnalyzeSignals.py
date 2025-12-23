@@ -18,9 +18,10 @@ dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
 startDate = datetime.date.fromisoformat("2024-01-01")
-endDate = datetime.date.fromisoformat("2025-12-01")
+endDate = datetime.date.fromisoformat("2025-01-01")
 
-tickerIds = ["AAPL", "GOOGL", "META"]
+tickerIds = ["AAPL", "GOOGL", "META", "BA"]
+# tickerIds = ["BA"]
 
 shortTermAverageCalculator = ExponentialMovingAverageCalculator(15, "15 Day EMA")
 longTermAverageCalculator = ExponentialMovingAverageCalculator(50, "50 Day EMA")
@@ -32,9 +33,14 @@ signalDetector = ExponentialAverageCrossoverSignalDetector()
 amountInvestedPerTrade = 100
 totalProfit = 0
 
-showGraphs = False
+showGraphs = True
+gridDimensions = [2, 2]
 
-for tickerId in tickerIds:
+fig, ax = plt.subplots(*gridDimensions, label=f"Trading signals", layout='constrained')
+
+for i in range(len(tickerIds)):
+
+    tickerId = tickerIds[i]
 
     dates = []
     closes = []
@@ -89,17 +95,19 @@ for tickerId in tickerIds:
             print(f"\nClosed long position on {tickerId}\nDate: {signal.date}\nPrice: {signal.price}\nProfit: £{profit:.2f}")
             
     if showGraphs:
-    
-        fig, ax = plt.subplots(label=f"{tickerId} trading signals", layout='constrained')
         
-        ax.plot(dates, closes, label="Close price")
-        ax.plot(dates, shortTermAverageData, label=shortTermAverageCalculator.description)
-        ax.plot(dates, longTermAverageData, label=longTermAverageCalculator.description)
+        axis = ax.flat[i]
         
-        ax.scatter(x=[s[0] for s in buySignalData], y=[s[1] for s in buySignalData], c="g", label="Buy signals")
-        ax.scatter(x=[s[0] for s in sellSignalData], y=[s[1] for s in sellSignalData], c="r", label="Sell signals")
-            
-        plt.legend(loc="upper left")
-        plt.show()
-                
+        axis.plot(dates, closes, label="Close price")
+        axis.plot(dates, shortTermAverageData, label=shortTermAverageCalculator.description)
+        axis.plot(dates, longTermAverageData, label=longTermAverageCalculator.description)
+        
+        axis.scatter(x=[s[0] for s in buySignalData], y=[s[1] for s in buySignalData], c="g", label="Buy signals")
+        axis.scatter(x=[s[0] for s in sellSignalData], y=[s[1] for s in sellSignalData], c="r", label="Sell signals")
+        
+        axis.set_title(tickerId)
+        axis.legend(loc="upper left")
+
 print(f"\n\nAnalysis complete.\nAmount invested per trade: £{amountInvestedPerTrade:.2f}\nSimulated total profit: £{totalProfit:.2f}")
+
+plt.show()
