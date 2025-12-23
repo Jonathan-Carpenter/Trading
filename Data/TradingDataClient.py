@@ -1,6 +1,7 @@
 import sqlite3
+import datetime
 
-from Model.DailyTicker import DailyTicker
+from Model.DailyTicker import DailyTickerOpenCloseSummary
 
 class TradingDataClient:
     def __init__(self, dbFileLocation: str):
@@ -32,7 +33,7 @@ class TradingDataClient:
         
         print("DB seeding completed.")
         
-    def addDailyTicker(self, ticker: DailyTicker):        
+    def addDailyTicker(self, ticker: DailyTickerOpenCloseSummary):        
         connection = sqlite3.connect(self.dbFileLocation)
         cursor = connection.cursor()
         
@@ -49,3 +50,24 @@ class TradingDataClient:
         
         connection.commit()
         connection.close()
+        
+    def getDailyTicker(self, symbol: str, date: datetime.date) -> DailyTickerOpenCloseSummary:
+        connection = sqlite3.connect(self.dbFileLocation)
+        cursor = connection.cursor()
+        
+        results = cursor.execute("SELECT symbol, date, open, close, high, low, volume FROM tickers WHERE symbol = ? AND date = ?", (symbol, date))
+        ticker = results.fetchone()
+        
+        connection.close()
+        
+        if not ticker:
+            return None
+        
+        return DailyTickerOpenCloseSummary(
+            ticker[0],
+            ticker[1],
+            ticker[2],
+            ticker[3],
+            ticker[4],
+            ticker[5],
+            ticker[6])

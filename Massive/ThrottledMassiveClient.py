@@ -2,7 +2,7 @@ import datetime
 import massive
 import time
 
-from Model.DailyTicker import DailyTicker
+from Model.DailyTicker import DailyTickerOpenCloseSummary
 
 class ThrottledMassiveClient:
     
@@ -23,14 +23,14 @@ class ThrottledMassiveClient:
             lambda currentDate: print(f'Querying details for {ticker} on {currentDate.isoformat()}')
         )
         
-    def getTickerSummary(self, ticker: str, startDate: datetime.date, endDate: datetime.date):
+    def getTickerOpenCloseSummary(self, ticker: str, startDate: datetime.date, endDate: datetime.date):
         
         assert startDate < endDate
             
         def getSummary(currentDate):
             try:
                 response = self.innerClient.get_daily_open_close_agg(ticker, date=currentDate.isoformat())
-                return DailyTicker(ticker, currentDate, response.open, response.close, response.high, response.low, response.volume)
+                return DailyTickerOpenCloseSummary(ticker, currentDate, response.open, response.close, response.high, response.low, response.volume)
             
             except massive.exceptions.BadResponse as badResponseException:
                 print(f"Failed to get open-close summary for {ticker} on {currentDate.isoformat()} due to a bad response. The error will be ignored. Exception details:\n{badResponseException}")

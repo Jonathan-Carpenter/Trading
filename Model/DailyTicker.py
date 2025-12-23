@@ -2,7 +2,7 @@ import datetime
 
 from typing import NamedTuple
 
-class DailyTicker(NamedTuple):
+class DailyTickerOpenCloseSummary(NamedTuple):
     symbol: str
     date: datetime.date
     open: float
