@@ -1,27 +1,13 @@
 import configparser
-import massive
 import datetime
 import matplotlib.pyplot as plt
-import numpy as np
 
-from Massive.ThrottledMassiveClient import ThrottledMassiveClient
 from Data.TradingDataClient import TradingDataClient
 from Model.Indicators.IdentityCalculator import IdentityCalculator
 from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
-from typing import NamedTuple, Any
-
-class IndicatorInfo(NamedTuple):
-    windowSize: int
-    description: str
-    calculator: Any
 
 config = configparser.ConfigParser()
 config.read('dev.ini')
-
-apiKey: str = config['massive']['ApiKey']
-
-massiveClient = massive.RESTClient(api_key=apiKey)
-throttledMassiveClient = ThrottledMassiveClient(12, massiveClient)
 
 dbFileLocation: str = config['database']['DatabaseFileLocation']
 
@@ -29,9 +15,9 @@ dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
 startDate = datetime.date.fromisoformat("2024-01-01")
-endDate = datetime.date.fromisoformat("2025-11-30")
+endDate = datetime.date.fromisoformat("2024-12-21")
 
-tickerId = "AAPL"
+tickerId = "META"
 
 calculators = [
     IdentityCalculator("Daily close price"),
@@ -53,8 +39,6 @@ while date < endDate:
     
     dates.append(date)
     closes.append(ticker.close)
-    
-dataCount = len(dates)
 
 for calculator in calculators:
     indicatorData = calculator.calculate(closes)
