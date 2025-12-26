@@ -1,7 +1,6 @@
 import configparser
 import massive
 import datetime
-import time
 
 from Massive.ThrottledMassiveClient import ThrottledMassiveClient
 from Data.TradingDataClient import TradingDataClient
@@ -19,16 +18,60 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-tickers = ["META", "BA", "BLK", "BAC", "MSFT", "ROK", "TTWO", "VRTX"]
+tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC", "MSFT", "ROK", "TTWO", "VRTX"]
+# tickerIds = ["BAC"]
 
-for ticker in tickers:
+startDate = datetime.date.fromisoformat('2024-01-01')
+endDate = datetime.date.fromisoformat('2025-12-01')
+
+skippedTickers = []
+
+for tickerId in tickerIds:
+    
+    print("\n###\n###\n###\n")
+    
+    ticker = dbClient.getLatestDailyTicker(tickerId)
+    fetchStartDate = startDate
+    
+    if ticker:
+        print(f"Last-known ticker data found for {tickerId} from {ticker.date}.")
+        
+        if ticker.date >= endDate:
+            print(f"WARNING: Skipping fetching ticker data for {tickerId} as last-known data is more recent than the specified range.")
+            
+            skippedTickers.append((ticker, "Last-known data is more recent than the specified range."))
+            
+            continue
+        
+        if ticker.date > startDate:
+            fetchStartDate = ticker.date + datetime.timedelta(days=1)
+        
+        elif startDate - ticker.date > datetime.timedelta(days=5):
+            print(f"WARNING: Skipping fetching ticker data for {tickerId} as it looks like you might have specified a date range which is discontinuous with previously fetched data.")
+            
+            skippedTickers.append((ticker, "Specified date range is discontinuous with previously fetched data."))
+            
+            continue
+        
+        print(f"Beginning fetching data for {tickerId} starting from {fetchStartDate}")
+        
+    else:
+        print(f"No last-known ticker data found for {tickerId}.")
+        print(f"Beginning fetching data for {tickerId} starting from beginning of specified range.")
+    
+    print("...")
     
     results = throttledMassiveClient.getTickerOpenCloseSummary(
-        ticker,
-        datetime.date.fromisoformat('2024-01-01'),
-        datetime.date.fromisoformat('2025-12-20'))
+        tickerId,
+        fetchStartDate,
+        endDate)
 
     for result in results:
         dbClient.addDailyTicker(result)
         
-    time.sleep(12)
+print("\n###\n###\n###\n")
+print(f"Fetch complete.\nStart date: {startDate}.\nEnd date: {endDate}.\n\nSkipped the following tickers:\n")
+
+for ticker in skippedTickers:
+    print({ticker[0]})
+    print(f"Reason for skipping: {ticker[1]}")

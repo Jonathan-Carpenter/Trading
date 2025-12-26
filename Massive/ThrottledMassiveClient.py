@@ -27,7 +27,8 @@ class ThrottledMassiveClient:
         
         assert startDate < endDate
             
-        def getSummary(currentDate):
+        def getSummary(currentDate: datetime.date):
+            
             try:
                 response = self.innerClient.get_daily_open_close_agg(ticker, date=currentDate.isoformat())
                 return DailyTickerOpenCloseSummary(ticker, currentDate, response.open, response.close, response.high, response.low, response.volume)
@@ -35,12 +36,21 @@ class ThrottledMassiveClient:
             except massive.exceptions.BadResponse as badResponseException:
                 print(f"Failed to get open-close summary for {ticker} on {currentDate.isoformat()} due to a bad response. The error will be ignored. Exception details:\n{badResponseException}")
                 return None
+            
+        def resolveState(currentDate: datetime.date):
+                        
+            nextDate = currentDate
+                        
+            while (nextDate == currentDate) or (nextDate.weekday() > 4):
+                nextDate += datetime.timedelta(days=1)
+                
+            return nextDate
         
         return self.__doClientOperation(
             getSummary,
             startDate,
             lambda _, currentDate: currentDate == endDate,
-            lambda _, currentDate: currentDate + datetime.timedelta(days=1),
+            lambda _, currentDate: resolveState(currentDate),
             lambda currentDate: print(f'Querying open-close summary for {ticker} on {currentDate.isoformat()}')
         )
     
@@ -61,5 +71,4 @@ class ThrottledMassiveClient:
             shouldContinue = not shouldEndFunc(result, state)
             state = resolveStateFunc(result, state)
             
-            if shouldContinue:
-                time.sleep(self.secondsPerFetch)
+            time.sleep(self.secondsPerFetch)

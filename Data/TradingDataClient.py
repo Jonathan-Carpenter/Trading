@@ -65,7 +65,28 @@ class TradingDataClient:
         
         return DailyTickerOpenCloseSummary(
             ticker[0],
-            ticker[1],
+            datetime.date.fromisoformat(ticker[1]),
+            ticker[2],
+            ticker[3],
+            ticker[4],
+            ticker[5],
+            ticker[6])
+        
+    def getLatestDailyTicker(self, symbol: str) -> DailyTickerOpenCloseSummary:
+        connection = sqlite3.connect(self.dbFileLocation)
+        cursor = connection.cursor()
+        
+        results = cursor.execute("SELECT symbol, date, open, close, high, low, volume FROM tickers WHERE symbol = ? ORDER BY date DESC LIMIT 1", (symbol,))
+        ticker = results.fetchone()
+        
+        connection.close()
+        
+        if not ticker:
+            return None
+        
+        return DailyTickerOpenCloseSummary(
+            ticker[0],
+            datetime.date.fromisoformat(ticker[1]),
             ticker[2],
             ticker[3],
             ticker[4],
