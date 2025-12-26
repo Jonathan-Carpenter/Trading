@@ -1,5 +1,5 @@
-from typing import NamedTuple
-
-class IndicatorData(NamedTuple):
-    description: str
-    data: list[float]
+class IndicatorData():
+    
+    def __init__(self, description: str, data: list[float | None]):
+        self.description = description
+        self.data = data

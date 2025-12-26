@@ -6,13 +6,13 @@ class SimpleMovingAverageCalculator(AverageCalculator):
     def __init__(self, windowSize: int, description: str):
         super().__init__(windowSize, description)
     
-    def calculate(self, sourceData):
+    def calculate(self, sourceData: list[float]):
         
         length = len(sourceData)
         
         assert length > self.windowSize
         
-        results = [None] * length
+        results: list[float | None] = [None] * length
         
         windowStart = 0
         windowEnd = self.windowSize

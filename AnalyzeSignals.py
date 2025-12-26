@@ -3,13 +3,17 @@ import datetime
 import matplotlib.pyplot as plt
 
 from Data.TradingDataClient import TradingDataClient
+from Model.Analysis.BollingerBandCrossoverAnalyzer import BollingerBandCrossoverAnalyzer
+from Model.Analysis.BollingerBandCrossoverVisualizer import BollingerBandCrossoverVisualizer
+from Model.Analysis.CompositeAnalyzer import CompositeAnalyzer
 from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
 from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
-from Model.ExponentialAverageCrossoverSignalDetector import ExponentialAverageCrossoverSignalDetector
-from Model.ExponentialAverageCrossoverAnalyzer import ExponentialAverageCrossoverAnalyzer
-from Model.ExponentialAverageCrossoverVisualizer import ExponentialAverageCrossoverVisualizer
-from Model.SimpleMarketTrackingAnalyzer import SimpleMarketTrackingAnalyzer
+from Model.Signals.BollingerBandCrossoverSignalDetector import BollingerBandCrossoverSignalDetector
+from Model.Signals.ExponentialAverageCrossoverSignalDetector import ExponentialAverageCrossoverSignalDetector
+from Model.Analysis.ExponentialAverageCrossoverAnalyzer import ExponentialAverageCrossoverAnalyzer
+from Model.Analysis.ExponentialAverageCrossoverVisualizer import ExponentialAverageCrossoverVisualizer
+from Model.Analysis.SimpleMarketTrackingAnalyzer import SimpleMarketTrackingAnalyzer
 from Model.Signals.TradingSignal import TradingSignal
 
 config = configparser.ConfigParser()
@@ -24,27 +28,39 @@ startDate = datetime.date.fromisoformat("2024-01-01")
 endDate = datetime.date.fromisoformat("2025-12-01")
 
 amountInvestedPerTrade = 100
-showGraphs = False
 
-tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC"]
+tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC", "MSFT"]
 # tickerIds = ["AAPL"]
 
-bollingerCalculator = BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA"))
-
-def getAnalyzers(tickerId: str, visualize: bool):
+def getAnalyzers(tickerId: str):
+    
+    exponentialAverageCrossoverAnalyzer = ExponentialAverageCrossoverAnalyzer(
+        amountInvestedPerTrade,
+        ExponentialMovingAverageCalculator(15, "15 Day EMA"),
+        ExponentialMovingAverageCalculator(50, "50 Day EMA"),
+        ExponentialAverageCrossoverSignalDetector(),
+        ExponentialAverageCrossoverVisualizer(f"{tickerId} Exponential Moving Average Crossover") if False else None)
+    
+    bollingerBandCrossoverAnalyzer = BollingerBandCrossoverAnalyzer(
+        amountInvestedPerTrade,
+        BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA")),
+        BollingerBandCrossoverSignalDetector(),
+        BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if False else None)
+    
     return {
         "market average": SimpleMarketTrackingAnalyzer(amountInvestedPerTrade),
-        "exponential average crossover": ExponentialAverageCrossoverAnalyzer(
+        "exponential average crossover": exponentialAverageCrossoverAnalyzer,
+        "bollinger band crossover": bollingerBandCrossoverAnalyzer,
+        "composite EMA + Bollinger": CompositeAnalyzer(
             amountInvestedPerTrade,
-            ExponentialMovingAverageCalculator(15, "15 Day EMA"),
-            ExponentialMovingAverageCalculator(50, "50 Day EMA"),
-            ExponentialAverageCrossoverSignalDetector(),
-            ExponentialAverageCrossoverVisualizer(tickerId) if visualize else None)
+            180,
+            2,
+            [exponentialAverageCrossoverAnalyzer, bollingerBandCrossoverAnalyzer])
     }
     
 profitPerAnalyzer: dict[str, float] = {}
 
-for key in getAnalyzers("SEED", False):
+for key in getAnalyzers("SEED"):
     profitPerAnalyzer[key] = 0
 
 for tickerId in tickerIds:
@@ -67,7 +83,7 @@ for tickerId in tickerIds:
         dates.append(date)
         closes.append(ticker.close)
         
-    analyzersDict = getAnalyzers(tickerId, showGraphs)
+    analyzersDict = getAnalyzers(tickerId)
         
     for key in analyzersDict:
                 
@@ -81,3 +97,5 @@ print("Simulated total profit per analyzer:")
 
 for key in profitPerAnalyzer:
     print(f"\t{key}: £{profitPerAnalyzer[key]:.2f}")
+    
+plt.show()

@@ -5,5 +5,5 @@ class AverageCalculator:
         self.windowSize = windowSize
         self.description = description
         
-    def calculate(self, sourceData) -> IndicatorData:
+    def calculate(self, sourceData: list[float]) -> IndicatorData:
         return IndicatorData(self.description, [])

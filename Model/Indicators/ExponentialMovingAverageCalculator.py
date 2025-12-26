@@ -6,13 +6,13 @@ class ExponentialMovingAverageCalculator(AverageCalculator):
     def __init__(self, windowSize: int, description: str):
         super().__init__(windowSize, description)
     
-    def calculate(self, sourceData) -> IndicatorData:
+    def calculate(self, sourceData: list[float]) -> IndicatorData:
         
         length = len(sourceData)
         
         assert length > 0
         
-        results = [None] * length
+        results: list[float] = [0] * length
         
         results[0] = sourceData[0]
         smoothingValue = 2 / (self.windowSize + 1)
