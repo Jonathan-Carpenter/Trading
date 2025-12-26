@@ -1,10 +1,10 @@
 from Model.Indicators.IndicatorData import IndicatorData
+from Model.Indicators.AverageCalculator import AverageCalculator
 
-class SimpleMovingAverageCalculator:
+class SimpleMovingAverageCalculator(AverageCalculator):
     
     def __init__(self, windowSize: int, description: str):
-        self.windowSize = windowSize
-        self.description = description
+        super().__init__(windowSize, description)
     
     def calculate(self, sourceData):
         
