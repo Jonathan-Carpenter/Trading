@@ -5,7 +5,7 @@ from Model.AnalysisResult import AnalysisResult
 
 class Analyzer:
     
-    def __init__(self, amountInvestedPerTrade):
+    def __init__(self, amountInvestedPerTrade: int):
         self.amountInvestedPerTrade = amountInvestedPerTrade
     
     def simulate(self, signals: list[TradingSignal]) -> AnalysisResult:

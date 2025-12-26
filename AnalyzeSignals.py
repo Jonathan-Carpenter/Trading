@@ -9,6 +9,8 @@ from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
 from Model.ExponentialAverageCrossoverSignalDetector import ExponentialAverageCrossoverSignalDetector
 from Model.ExponentialAverageCrossoverAnalyzer import ExponentialAverageCrossoverAnalyzer
 from Model.ExponentialAverageCrossoverVisualizer import ExponentialAverageCrossoverVisualizer
+from Model.SimpleMarketTrackingAnalyzer import SimpleMarketTrackingAnalyzer
+from Model.Signals.TradingSignal import TradingSignal
 
 config = configparser.ConfigParser()
 config.read('dev.ini')
@@ -20,25 +22,34 @@ dbClient.ensureSeeded()
 
 startDate = datetime.date.fromisoformat("2024-01-01")
 endDate = datetime.date.fromisoformat("2025-12-01")
-amountInvestedPerTrade = 100
 
-tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK"]
+amountInvestedPerTrade = 100
+showGraphs = False
+
+tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC"]
 # tickerIds = ["AAPL"]
 
 bollingerCalculator = BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA"))
 
-analyzer = ExponentialAverageCrossoverAnalyzer(
-    amountInvestedPerTrade,
-    ExponentialMovingAverageCalculator(15, "15 Day EMA"),
-    ExponentialMovingAverageCalculator(50, "50 Day EMA"),
-    ExponentialAverageCrossoverSignalDetector(),
-    ExponentialAverageCrossoverVisualizer())
+def getAnalyzers(tickerId: str, visualize: bool):
+    return {
+        "market average": SimpleMarketTrackingAnalyzer(amountInvestedPerTrade),
+        "exponential average crossover": ExponentialAverageCrossoverAnalyzer(
+            amountInvestedPerTrade,
+            ExponentialMovingAverageCalculator(15, "15 Day EMA"),
+            ExponentialMovingAverageCalculator(50, "50 Day EMA"),
+            ExponentialAverageCrossoverSignalDetector(),
+            ExponentialAverageCrossoverVisualizer(tickerId) if visualize else None)
+    }
+    
+profitPerAnalyzer: dict[str, float] = {}
 
-totalProfit = 0
+for key in getAnalyzers("SEED", False):
+    profitPerAnalyzer[key] = 0
 
-for i in range(len(tickerIds)):
-
-    tickerId = tickerIds[i]
+for tickerId in tickerIds:
+    
+    print(f"Analyzing {tickerId}...")
 
     dates = []
     closes = []
@@ -56,7 +67,17 @@ for i in range(len(tickerIds)):
         dates.append(date)
         closes.append(ticker.close)
         
-    totalProfit += analyzer.analyze(dates, closes).totalProfit
+    analyzersDict = getAnalyzers(tickerId, showGraphs)
+        
+    for key in analyzersDict:
+                
+        analysisResult = analyzersDict[key].analyze(dates, closes)
+        
+        profitPerAnalyzer[key] += analysisResult.totalProfit
     
+print("Analysis complete.")
+print(f"Amount invested per trade: £{amountInvestedPerTrade:.2f}")
+print("Simulated total profit per analyzer:")
 
-print(f"\n\nAnalysis complete.\nAmount invested per trade: £{amountInvestedPerTrade:.2f}\nSimulated total profit: £{totalProfit:.2f}")
+for key in profitPerAnalyzer:
+    print(f"\t{key}: £{profitPerAnalyzer[key]:.2f}")

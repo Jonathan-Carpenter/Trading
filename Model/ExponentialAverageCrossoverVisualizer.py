@@ -4,8 +4,8 @@ from Model.Visualizer import Visualizer
 
 class ExponentialAverageCrossoverVisualizer(Visualizer):
     
-    def __init__(self, description: str = "Trading signals based on crossover of dual exponential moving averages"):
-        self.description = description
+    def __init__(self, tickerId: str):
+        self.description = f"Trading signals for {tickerId} based on Exponential Moving Average crossover"
         
     def visualize(self, dates, sourceData, shortTermAverageData, longTermAverageData, signals):
         fig, ax = plt.subplots(label=self.description, layout='constrained')
