@@ -30,4 +30,6 @@ class CompositeVisualizer(Visualizer):
         ax.scatter(x=[s.date for s in buySignals], y=[s.price for s in buySignals], c="#8cdb8f", label="Inner buy signals")
         ax.scatter(x=[s.date for s in sellSignals], y=[s.price for s in sellSignals], c="#db8c8c", label="Inner sell signals")
         
+        ax.legend()
+        
         self.plotSignals(ax, compositeSignals)

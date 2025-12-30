@@ -15,7 +15,7 @@ class CompositeAnalyzer(Analyzer):
         windowSize: int,
         scoreThreshold: float,
         confidenceRatioThreshold: float,
-        analyzers: list[Analyzer],
+        analyzersWithWeightings: list[(Analyzer, int)],
         visualizer: CompositeVisualizer | None):
         
         super().__init__(amountInvestedPerTrade)
@@ -23,36 +23,37 @@ class CompositeAnalyzer(Analyzer):
         self.windowSize = windowSize
         self.scoreThreshold = scoreThreshold
         self.confidenceRatioThreshold = confidenceRatioThreshold
-        self.analyzers = analyzers
+        self.analyzersWithWeightings = analyzersWithWeightings
         self.visualizer = visualizer
         
         self.id = uuid.uuid4()
-        self.signalCountWeighting = 1 / (self.windowSize + len(self.analyzers))
+        self.windowSizeWeighting = 1 / self.windowSize
+        self.totalAnalyzerWeights = sum([weighting for (_, weighting) in self.analyzersWithWeightings])
       
     def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
-        signals: list[TradingSignal] = []
+        signalsWithWeightings: list[(TradingSignal, int)] = []
         
-        for analyzer in self.analyzers:
+        for (analyzer, weighting) in self.analyzersWithWeightings:
             newSignals = analyzer.analyze(dates, sourceData, True)
-            signals += newSignals
+            signalsWithWeightings += [(s, weighting) for s in newSignals]
             
         compositeSignals: list[TradingSignal] = []
             
         for i in range(len(dates)):
             
-            relevantSignals = [s for s in signals if s.date < dates[i] and (dates[i] - s.date).days < self.windowSize]
+            relevantSignals = [s for s in signalsWithWeightings if s[0].date < dates[i] and (dates[i] - s[0].date).days < self.windowSize]
             
             buyScore = 0
             sellScore = 0
             
-            for signal in relevantSignals:
+            for (signal, weighting) in relevantSignals:
                 
                 daysAgo = dates[i] - signal.date
                 recencyWeighting = 1 / (1 + daysAgo.days)
+                analyzerWeighting = weighting / self.totalAnalyzerWeights
                 
-                # TODO: Consider supporting a separate weighting for each signal source -> e.g. prefer more certain indicators? That would assume that they have different levels of "noise" in their signals.
-                signalEffect = self.signalCountWeighting * recencyWeighting * 100 # multiplying by 100 just makes scores easier to read when logging
+                signalEffect = self.windowSizeWeighting * recencyWeighting * analyzerWeighting * 100 # multiplying by 100 just makes scores easier to read when logging
                 
                 if isinstance(signal, BuySignal):
                     buyScore += signalEffect
@@ -74,6 +75,6 @@ class CompositeAnalyzer(Analyzer):
         result = self.simulate(compositeSignals)
         
         if self.visualizer:
-            self.visualizer.visualize(dates, sourceData, signals, result.actionedSignals)
+            self.visualizer.visualize(dates, sourceData, [s for (s, _) in signalsWithWeightings], result.actionedSignals)
         
         return result
