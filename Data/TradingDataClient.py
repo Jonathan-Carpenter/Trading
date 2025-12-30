@@ -33,6 +33,17 @@ class TradingDataClient:
         
         print("DB seeding completed.")
         
+    def getAllDailyTickerSymbols(self) -> list[str]:
+        connection = sqlite3.connect(self.dbFileLocation)
+        cursor = connection.cursor()
+        
+        results = cursor.execute("SELECT DISTINCT symbol FROM tickers")
+        tickers = results.fetchall()
+        
+        connection.close()
+        
+        return [ticker[0] for ticker in tickers]
+        
     def addDailyTicker(self, ticker: DailyTickerOpenCloseSummary):        
         connection = sqlite3.connect(self.dbFileLocation)
         cursor = connection.cursor()

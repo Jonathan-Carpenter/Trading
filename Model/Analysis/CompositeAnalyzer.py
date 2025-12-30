@@ -51,7 +51,8 @@ class CompositeAnalyzer(Analyzer):
                 daysAgo = dates[i] - signal.date
                 recencyWeighting = 1 / (1 + daysAgo.days)
                 
-                signalEffect = self.signalCountWeighting * recencyWeighting * 100
+                # TODO: Consider supporting a separate weighting for each signal source -> e.g. prefer more certain indicators? That would assume that they have different levels of "noise" in their signals.
+                signalEffect = self.signalCountWeighting * recencyWeighting * 100 # multiplying by 100 just makes scores easier to read when logging
                 
                 if isinstance(signal, BuySignal):
                     buyScore += signalEffect

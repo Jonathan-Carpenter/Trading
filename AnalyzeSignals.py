@@ -30,8 +30,10 @@ endDate = datetime.date.fromisoformat("2025-12-01")
 
 amountInvestedPerTrade = 100
 
-tickerIds = ["AAPL", "BA", "BAC", "BLK", "GOOGL", "META", "MSFT", "ROK", "TTWO"]
-# tickerIds = ["AAPL"]
+tickerIds = dbClient.getAllDailyTickerSymbols()
+
+# visualizedTickers = { "ABT" }
+visualizedTickers = {}
 
 def getAnalyzers(tickerId: str):
     
@@ -40,13 +42,13 @@ def getAnalyzers(tickerId: str):
         ExponentialMovingAverageCalculator(15, "15 Day EMA"),
         ExponentialMovingAverageCalculator(50, "50 Day EMA"),
         ExponentialAverageCrossoverSignalDetector(),
-        ExponentialAverageCrossoverVisualizer(f"{tickerId} Exponential Moving Average Crossover") if False else None)
+        ExponentialAverageCrossoverVisualizer(f"{tickerId} Exponential Moving Average Crossover") if tickerId in visualizedTickers else None)
     
     bollingerBandCrossoverAnalyzer = BollingerBandCrossoverAnalyzer(
         amountInvestedPerTrade,
         BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA")),
         BollingerBandCrossoverSignalDetector(),
-        BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if False else None)
+        BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if tickerId in visualizedTickers else None)
     
     analyzers = {
         "market average": SimpleMarketTrackingAnalyzer(amountInvestedPerTrade),
@@ -65,7 +67,7 @@ def getAnalyzers(tickerId: str):
             scoreThreshold,
             2,
             [exponentialAverageCrossoverAnalyzer, bollingerBandCrossoverAnalyzer],
-            CompositeVisualizer(f"{tickerId} Composite Analysis") if True else None)
+            CompositeVisualizer(f"{tickerId} Composite Analysis") if tickerId in visualizedTickers else None)
     
     return analyzers
     
