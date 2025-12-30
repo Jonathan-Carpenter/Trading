@@ -4,6 +4,7 @@ import datetime
 
 from Massive.ThrottledMassiveClient import ThrottledMassiveClient
 from Data.TradingDataClient import TradingDataClient
+from Tickers import Tickers
 
 config = configparser.ConfigParser()
 config.read('dev.ini')
@@ -18,8 +19,7 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC", "MSFT", "ROK", "TTWO", "VRTX"]
-# tickerIds = ["BAC"]
+tickerIds = Tickers().sp500tickers()
 
 startDate = datetime.date.fromisoformat('2024-01-01')
 endDate = datetime.date.fromisoformat('2025-12-01')

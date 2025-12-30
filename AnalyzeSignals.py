@@ -6,6 +6,7 @@ from Data.TradingDataClient import TradingDataClient
 from Model.Analysis.BollingerBandCrossoverAnalyzer import BollingerBandCrossoverAnalyzer
 from Model.Analysis.BollingerBandCrossoverVisualizer import BollingerBandCrossoverVisualizer
 from Model.Analysis.CompositeAnalyzer import CompositeAnalyzer
+from Model.Analysis.CompositeVisualizer import CompositeVisualizer
 from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
 from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
@@ -29,7 +30,7 @@ endDate = datetime.date.fromisoformat("2025-12-01")
 
 amountInvestedPerTrade = 100
 
-tickerIds = ["AAPL", "GOOGL", "META", "BA", "BLK", "BAC", "MSFT"]
+tickerIds = ["AAPL", "BA", "BAC", "BLK", "GOOGL", "META", "MSFT", "ROK", "TTWO"]
 # tickerIds = ["AAPL"]
 
 def getAnalyzers(tickerId: str):
@@ -47,16 +48,26 @@ def getAnalyzers(tickerId: str):
         BollingerBandCrossoverSignalDetector(),
         BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if False else None)
     
-    return {
+    analyzers = {
         "market average": SimpleMarketTrackingAnalyzer(amountInvestedPerTrade),
         "exponential average crossover": exponentialAverageCrossoverAnalyzer,
-        "bollinger band crossover": bollingerBandCrossoverAnalyzer,
-        "composite EMA + Bollinger": CompositeAnalyzer(
-            amountInvestedPerTrade,
-            180,
-            2,
-            [exponentialAverageCrossoverAnalyzer, bollingerBandCrossoverAnalyzer])
+        "bollinger band crossover": bollingerBandCrossoverAnalyzer
     }
+    
+    for i in range(1, 2):
+        
+        # scoreThreshold = i / 10
+        scoreThreshold = 1.6
+        
+        analyzers[f"{scoreThreshold:.2f} composite EMA + Bollinger"] = CompositeAnalyzer(
+            amountInvestedPerTrade,
+            30,
+            scoreThreshold,
+            2,
+            [exponentialAverageCrossoverAnalyzer, bollingerBandCrossoverAnalyzer],
+            CompositeVisualizer(f"{tickerId} Composite Analysis") if True else None)
+    
+    return analyzers
     
 profitPerAnalyzer: dict[str, float] = {}
 

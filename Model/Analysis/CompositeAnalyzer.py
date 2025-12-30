@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from Model.Analysis.CompositeVisualizer import CompositeVisualizer
 from Model.AnalysisResult import AnalysisResult
 from Model.Analysis.Analyzer import Analyzer
 from Model.Signals.TradingSignal import TradingSignal
@@ -11,73 +12,67 @@ class CompositeAnalyzer(Analyzer):
     def __init__(
         self,
         amountInvestedPerTrade: int,
-        agreementWindowDays: int,
-        agreementThreshold: int,
-        analyzers: list[Analyzer]):
+        windowSize: int,
+        scoreThreshold: float,
+        confidenceRatioThreshold: float,
+        analyzers: list[Analyzer],
+        visualizer: CompositeVisualizer | None):
         
         super().__init__(amountInvestedPerTrade)
         
-        self.agreementWindowDays = agreementWindowDays
-        self.agreementThreshold = agreementThreshold
+        self.windowSize = windowSize
+        self.scoreThreshold = scoreThreshold
+        self.confidenceRatioThreshold = confidenceRatioThreshold
         self.analyzers = analyzers
+        self.visualizer = visualizer
+        
         self.id = uuid.uuid4()
+        self.signalCountWeighting = 1 / (self.windowSize + len(self.analyzers))
+      
+    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
-    def analyze(self, dates: list[datetime.date], sourceData: list[float]) -> AnalysisResult:
-        
-        signalsByDate: dict[datetime.date, list[TradingSignal]] = {}
-        
-        for date in dates:
-            signalsByDate[date] = []
+        signals: list[TradingSignal] = []
         
         for analyzer in self.analyzers:
-            result = analyzer.analyze(dates, sourceData)
+            newSignals = analyzer.analyze(dates, sourceData, True)
+            signals += newSignals
             
-            for signal in result.actionedSignals:
-                signalsByDate[signal.date].append(signal)
+        compositeSignals: list[TradingSignal] = []
             
-        windowStart = 0
-        windowEnd = self.agreementWindowDays
+        for i in range(len(dates)):
+            
+            relevantSignals = [s for s in signals if s.date < dates[i] and (dates[i] - s.date).days < self.windowSize]
+            
+            buyScore = 0
+            sellScore = 0
+            
+            for signal in relevantSignals:
+                
+                daysAgo = dates[i] - signal.date
+                recencyWeighting = 1 / (1 + daysAgo.days)
+                
+                signalEffect = self.signalCountWeighting * recencyWeighting * 100
+                
+                if isinstance(signal, BuySignal):
+                    buyScore += signalEffect
+                    
+                if isinstance(signal, SellSignal):
+                    sellScore += signalEffect
+                    
+            # print(f"Buy={buyScore:3f}; Sell={sellScore:3f}")
+            
+            if (buyScore > self.scoreThreshold) and (buyScore > sellScore * self.confidenceRatioThreshold):
+                compositeSignals.append(BuySignal(sourceData[i], dates[i], self.id))
+                
+            if (sellScore > self.scoreThreshold) and (sellScore > buyScore * self.confidenceRatioThreshold):
+                compositeSignals.append(SellSignal(sourceData[i], dates[i], self.id))
         
-        compositeSignals = []
-        
-        while windowEnd < len(dates):
-            
-            windowDates = [dates[windowStart] + datetime.timedelta(days=i) for i in range(self.agreementWindowDays)]
-            
-            uniqueAnalyzersWithBuySignals = set()
-            uniqueAnalyzersWithSellSignals = set()
-            
-            for date in windowDates:
-                
-                if date not in signalsByDate:
-                    continue
-                
-                signals = signalsByDate[date]
-                
-                for signal in signals:
-                    if isinstance(signal, BuySignal):
-                        # print(signal)
-                        uniqueAnalyzersWithBuySignals.add(signal.detectorId)
-                        
-                    if isinstance(signal, SellSignal):
-                        # print(signal)
-                        uniqueAnalyzersWithSellSignals.add(signal.detectorId)
-                        
-            # print(len(uniqueAnalyzersWithBuySignals))
-            # print(len(uniqueAnalyzersWithSellSignals))
-            # print("\n")
-                
-            if len(uniqueAnalyzersWithSellSignals) >= self.agreementThreshold:
-                # print("Composite sell")
-                compositeSignals.append(SellSignal(sourceData[windowEnd], dates[windowEnd], self.id))
-                        
-            elif len(uniqueAnalyzersWithBuySignals) >= self.agreementThreshold:
-                # print("Composite buy")
-                compositeSignals.append(BuySignal(sourceData[windowEnd], dates[windowEnd], self.id))
-                        
-            windowStart += 1
-            windowEnd += 1
+        if rawSignals:
+            return compositeSignals
         
         result = self.simulate(compositeSignals)
+        
+        if self.visualizer:
+            self.visualizer.visualize(dates, sourceData, signals, result.actionedSignals)
         
         return result

@@ -7,7 +7,7 @@ class BollingerBandsCalculator:
     def __init__(self, averageCalculator: AverageCalculator):
         self.averageCalculator = averageCalculator
         
-    def calculate(self, sourceData: list[float]):
+    def calculate(self, sourceData: list[float]) -> UpperLowerBoundIndicatorData:
         
         length = len(sourceData)
         

@@ -1,3 +1,4 @@
+import datetime
 from Model.Signals.TradingSignal import TradingSignal
 from Model.Signals.BuySignal import BuySignal
 from Model.Signals.SellSignal import SellSignal
@@ -38,5 +39,5 @@ class Analyzer:
                 
         return AnalysisResult(totalProfit, actionedSignals)
     
-    def analyze(self, dates, sourceData) -> AnalysisResult:
+    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         return None
