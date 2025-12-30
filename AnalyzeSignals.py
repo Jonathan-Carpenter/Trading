@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from Data.TradingDataClient import TradingDataClient
+from Model.Analysis.Analyzer import Analyzer
 from Model.Analysis.BollingerBandCrossoverAnalyzer import BollingerBandCrossoverAnalyzer
 from Model.Analysis.BollingerBandCrossoverVisualizer import BollingerBandCrossoverVisualizer
+from Model.Analysis.CachingAnalyzer import CachingAnalyzer
 from Model.Analysis.CompositeAnalyzer import CompositeAnalyzer
 from Model.Analysis.CompositeVisualizer import CompositeVisualizer
 from Model.Analysis.MovingAverageConvergenceDivergenceCrossoverAnalyzer import MovingAverageConvergenceDivergenceCrossoverAnalyzer
@@ -40,31 +42,36 @@ tickerIds = dbClient.getAllDailyTickerSymbols()
 # visualizedTickers = { "AAPL" }
 visualizedTickers = {}
 
-def getAnalyzers(tickerId: str):
+def getAnalyzers(tickerId: str) -> dict[str, Analyzer]:
     
-    exponentialAverageCrossoverAnalyzer = ExponentialAverageCrossoverAnalyzer(
+    exponentialAverageCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
-        ExponentialMovingAverageCalculator(15, "15 Day EMA"),
-        ExponentialMovingAverageCalculator(50, "50 Day EMA"),
-        ExponentialAverageCrossoverSignalDetector(),
-        ExponentialAverageCrossoverVisualizer(f"{tickerId} Exponential Moving Average Crossover") if tickerId in visualizedTickers else None)
+        ExponentialAverageCrossoverAnalyzer(
+            amountInvestedPerTrade,
+            ExponentialMovingAverageCalculator(15, "15 Day EMA"),
+            ExponentialMovingAverageCalculator(50, "50 Day EMA"),
+            ExponentialAverageCrossoverSignalDetector(),
+            ExponentialAverageCrossoverVisualizer(f"{tickerId} Exponential Moving Average Crossover") if tickerId in visualizedTickers else None))
     
-    bollingerBandCrossoverAnalyzer = BollingerBandCrossoverAnalyzer(
+    bollingerBandCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
-        BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA")),
-        BollingerBandCrossoverSignalDetector(),
-        BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if tickerId in visualizedTickers else None)
+        BollingerBandCrossoverAnalyzer(
+            amountInvestedPerTrade,
+            BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "20 Day SMA")),
+            BollingerBandCrossoverSignalDetector(),
+            BollingerBandCrossoverVisualizer(f"{tickerId} Bollinger Band Crossover") if tickerId in visualizedTickers else None))
     
-    movingAverageConvergenceDivergenceCrossoverAnalyzer = MovingAverageConvergenceDivergenceCrossoverAnalyzer(
+    movingAverageConvergenceDivergenceCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
-        MovingAverageConvergenceDivergenceCalculator(
-            "Moving Average Convergence Divergence",
-            ExponentialMovingAverageCalculator(12, "12 Day EMA"),
-            ExponentialMovingAverageCalculator(26, "26 Day EMA"),
-            ExponentialMovingAverageCalculator(9, "9 Day EMA")),
-        MovingAverageConvergenceDivergenceCrossoverSignalDetector(),
-        MovingAverageConvergenceDivergenceCrossoverVisualizer(f"{tickerId} Moving Average Convergence Divergence Crossover") if tickerId in visualizedTickers else None
-    )
+        MovingAverageConvergenceDivergenceCrossoverAnalyzer(
+            amountInvestedPerTrade,
+            MovingAverageConvergenceDivergenceCalculator(
+                "Moving Average Convergence Divergence",
+                ExponentialMovingAverageCalculator(12, "12 Day EMA"),
+                ExponentialMovingAverageCalculator(26, "26 Day EMA"),
+                ExponentialMovingAverageCalculator(9, "9 Day EMA")),
+            MovingAverageConvergenceDivergenceCrossoverSignalDetector(),
+            MovingAverageConvergenceDivergenceCrossoverVisualizer(f"{tickerId} Moving Average Convergence Divergence Crossover") if tickerId in visualizedTickers else None))
     
     analyzers = {
         "Market Average": SimpleMarketTrackingAnalyzer(amountInvestedPerTrade),
@@ -78,7 +85,7 @@ def getAnalyzers(tickerId: str):
         # scoreThreshold = i / 10
         scoreThreshold = 0.5
         
-        analyzers[f"{scoreThreshold:.2f} Composite EMA + Bollinger - Threshold {scoreThreshold:.2f}"] = CompositeAnalyzer(
+        analyzers[f"Composite EMA (1) + Bollinger (1) - Threshold {scoreThreshold:.2f}"] = CompositeAnalyzer(
             amountInvestedPerTrade,
             30,
             scoreThreshold,
@@ -89,23 +96,23 @@ def getAnalyzers(tickerId: str):
             ],
             CompositeVisualizer(f"{tickerId} Composite EMA + Bollinger Analysis") if tickerId in visualizedTickers else None)
         
-    for scoreThresholdSeed in range(1, 2):
-        for emaWeight in range(1, 2):
-            for bollingerWeight in range(1, 2):
-                for macdWeight in range(1, 2):
-                    for windowSize in range(1, 2):
-                        for confidenceRatioThresholdSeed in range(1, 2):
+    for scoreThresholdSeed in range(7, 8):
+        for emaWeight in range(5, 6):
+            for bollingerWeight in range(5, 6):
+                for macdWeight in range(10, 11):
+                    for windowSize in range(35, 36):
+                        for confidenceRatioThresholdSeed in range(23, 24):
         
                             # Dynamic values
                             scoreThreshold = scoreThresholdSeed / 10.0
                             confidenceRatioThreshold = confidenceRatioThresholdSeed / 10.0
                             
                             # Static values
-                            scoreThreshold = 0.9
-                            emaWeight = 10
-                            bollingerWeight = 17
-                            macdWeight = 6
-                            windowSize = 30
+                            scoreThreshold = 0.8
+                            emaWeight = 5
+                            bollingerWeight = 5
+                            macdWeight = 10
+                            windowSize = 35
                             confidenceRatioThreshold = 2.3
                             
                             analyzers[f"Composite EMA ({emaWeight}), Bollinger ({bollingerWeight}) + MACD ({macdWeight}) Analysis - Score Threshold {scoreThreshold:.2f} - Confidence Ratio Threshold {confidenceRatioThreshold:.2f} - Window Size {windowSize}"] = CompositeAnalyzer(
@@ -145,20 +152,24 @@ for tickerId in tqdm(tickerIds):
         dates.append(date)
         closes.append(ticker.close)
         
+    if len(closes) < (endDate - startDate).days / 2:
+        continue
+    
     analyzersDict = getAnalyzers(tickerId)
         
-    for key in tqdm(analyzersDict):
+    for key in tqdm(analyzersDict, leave=False):
                 
-        analysisResult = analyzersDict[key].analyze(dates, closes)
+        analysisResult = analyzersDict[key].analyze(tickerId, dates, closes)
         
         profitPerAnalyzer[key] += analysisResult.totalProfit
         
     print("")
     
-print("\nAnalysis complete.")
+print(f"\nAnalysis complete @ {datetime.datetime.now()}.")
 print(f"Amount invested per trade: £{amountInvestedPerTrade:.2f}")
     
 analyzersByProfit = sorted(profitPerAnalyzer.items(), key=lambda analyzerProfit: analyzerProfit[1], reverse=True)
+bestProfit = analyzersByProfit[0][1]
     
 print(f"\nTop 20 analyzers:\n")
 
@@ -170,6 +181,13 @@ for i in range(20):
         print(f"{i + 1}.\n")
         continue
     
-    print(f"{i + 1}. {analyzersByProfit[i][0]}\nProfit: £{profitPerAnalyzer[analyzersByProfit[i][0]]:.2f}\n")
+    name = analyzersByProfit[i][0]
+    profit = analyzersByProfit[i][1]
     
-plt.show()
+    print(f"{i + 1}. {name}")
+    print(f"Profit: £{profit:.2f}")
+    
+    if i > 0:
+        print(f"({(profit / bestProfit) * 100:.1f}% of best)")
+        
+    print("")

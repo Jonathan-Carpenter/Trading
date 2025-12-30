@@ -12,7 +12,7 @@ config.read('dev.ini')
 apiKey: str = config['massive']['ApiKey']
 
 massiveClient = massive.RESTClient(api_key=apiKey)
-throttledMassiveClient = ThrottledMassiveClient(12, massiveClient)
+throttledMassiveClient = ThrottledMassiveClient(None, massiveClient)
 
 dbFileLocation: str = config['database']['DatabaseFileLocation']
 

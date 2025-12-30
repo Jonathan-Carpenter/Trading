@@ -27,8 +27,8 @@ class CompositeVisualizer(Visualizer):
             if isinstance(signal, SellSignal):
                 sellSignals.append(signal)
         
-        ax.scatter(x=[s.date for s in buySignals], y=[s.price for s in buySignals], c="#8cdb8f", label="Inner buy signals")
-        ax.scatter(x=[s.date for s in sellSignals], y=[s.price for s in sellSignals], c="#db8c8c", label="Inner sell signals")
+        ax.scatter(x=[s.date for s in buySignals], y=[s.price for s in buySignals], c="#96ffad", marker="x", label="Inner buy signals")
+        ax.scatter(x=[s.date for s in sellSignals], y=[s.price for s in sellSignals], c="#ff9b9b", marker="x", label="Inner sell signals")
         
         ax.legend()
         

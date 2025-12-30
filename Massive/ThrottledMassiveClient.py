@@ -6,7 +6,7 @@ from Model.DailyTicker import DailyTickerOpenCloseSummary
 
 class ThrottledMassiveClient:
     
-    def __init__(self, secondsPerFetch: int, innerClient: massive.RESTClient):
+    def __init__(self, secondsPerFetch: int | None, innerClient: massive.RESTClient):
         
         self.secondsPerFetch = secondsPerFetch
         self.innerClient = innerClient
@@ -71,4 +71,5 @@ class ThrottledMassiveClient:
             shouldContinue = not shouldEndFunc(result, state)
             state = resolveStateFunc(result, state)
             
-            time.sleep(self.secondsPerFetch)
+            if self.secondsPerFetch:
+                time.sleep(self.secondsPerFetch)

@@ -22,7 +22,7 @@ class BollingerBandCrossoverAnalyzer(Analyzer):
         self.bollingSignalDetector = bollingerSignalDetector
         self.bollingerVisualizer = bollingerVisualizer
         
-    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+    def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         bollingerData = self.bollingerCalculator.calculate(sourceData)
         signals = self.bollingSignalDetector.detect(dates, sourceData, bollingerData)
         

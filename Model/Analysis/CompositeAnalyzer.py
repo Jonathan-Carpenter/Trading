@@ -30,12 +30,12 @@ class CompositeAnalyzer(Analyzer):
         self.windowSizeWeighting = 1 / self.windowSize
         self.totalAnalyzerWeights = sum([weighting for (_, weighting) in self.analyzersWithWeightings])
       
-    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+    def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
         signalsWithWeightings: list[(TradingSignal, int)] = []
         
         for (analyzer, weighting) in self.analyzersWithWeightings:
-            newSignals = analyzer.analyze(dates, sourceData, True)
+            newSignals = analyzer.analyze(tickerSymbol, dates, sourceData, True)
             signalsWithWeightings += [(s, weighting) for s in newSignals]
             
         compositeSignals: list[TradingSignal] = []

@@ -23,7 +23,7 @@ class MovingAverageConvergenceDivergenceCrossoverAnalyzer(Analyzer):
         self.signalDetector = signalDetector
         self.visualizer = visualizer        
     
-    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+    def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
         movingAverageConvergenceDivergenceData = self.movingAverageConvergenceDivergenceCalculator.calculate(sourceData)
         

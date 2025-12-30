@@ -39,5 +39,5 @@ class Analyzer:
                 
         return AnalysisResult(totalProfit, actionedSignals)
     
-    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+    def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         return None

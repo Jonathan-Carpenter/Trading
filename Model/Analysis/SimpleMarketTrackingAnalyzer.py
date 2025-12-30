@@ -13,7 +13,7 @@ class SimpleMarketTrackingAnalyzer(Analyzer):
         
         self.id = uuid.uuid4()
         
-    def analyze(self, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+    def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
         buySignal = BuySignal(sourceData[0], dates[0], self.id)
         sellSignal = SellSignal(sourceData[-1], dates[-1], self.id)

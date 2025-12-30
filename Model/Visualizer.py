@@ -20,3 +20,8 @@ class Visualizer:
                 
         ax.scatter(x=[s.date for s in buySignals], y=[s.price for s in buySignals], c="g", label="Buy signals")
         ax.scatter(x=[s.date for s in sellSignals], y=[s.price for s in sellSignals], c="r", label="Sell signals")
+        
+        ax.legend()
+        
+        plt.show()
+        plt.close()
