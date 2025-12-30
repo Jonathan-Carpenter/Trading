@@ -89,29 +89,36 @@ def getAnalyzers(tickerId: str):
             ],
             CompositeVisualizer(f"{tickerId} Composite EMA + Bollinger Analysis") if tickerId in visualizedTickers else None)
         
-    for i in range(1, 2):
+    for scoreThresholdSeed in range(1, 2):
         for emaWeight in range(1, 2):
             for bollingerWeight in range(1, 2):
                 for macdWeight in range(1, 2):
+                    for windowSize in range(1, 2):
+                        for confidenceRatioThresholdSeed in range(1, 2):
         
-                    # scoreThreshold = i / 10
-                    
-                    scoreThreshold = 0.6
-                    emaWeight = 3
-                    bollingerWeight = 2
-                    macdWeight = 1
-                    
-                    analyzers[f"Composite EMA ({emaWeight}), Bollinger ({bollingerWeight}) + MACD ({macdWeight}) Analysis - Threshold {scoreThreshold:.2f}"] = CompositeAnalyzer(
-                        amountInvestedPerTrade,
-                        30,
-                        scoreThreshold,
-                        2,
-                        [
-                            (exponentialAverageCrossoverAnalyzer, emaWeight),
-                            (bollingerBandCrossoverAnalyzer, bollingerWeight),
-                            (movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight)
-                        ],
-                        CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger + MACD Analysis") if tickerId in visualizedTickers else None)
+                            # Dynamic values
+                            scoreThreshold = scoreThresholdSeed / 10.0
+                            confidenceRatioThreshold = confidenceRatioThresholdSeed / 10.0
+                            
+                            # Static values
+                            scoreThreshold = 0.9
+                            emaWeight = 10
+                            bollingerWeight = 17
+                            macdWeight = 6
+                            windowSize = 30
+                            confidenceRatioThreshold = 2.3
+                            
+                            analyzers[f"Composite EMA ({emaWeight}), Bollinger ({bollingerWeight}) + MACD ({macdWeight}) Analysis - Score Threshold {scoreThreshold:.2f} - Confidence Ratio Threshold {confidenceRatioThreshold:.2f} - Window Size {windowSize}"] = CompositeAnalyzer(
+                                amountInvestedPerTrade,
+                                windowSize,
+                                scoreThreshold,
+                                confidenceRatioThreshold,
+                                [
+                                    (exponentialAverageCrossoverAnalyzer, emaWeight),
+                                    (bollingerBandCrossoverAnalyzer, bollingerWeight),
+                                    (movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight)
+                                ],
+                                CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger + MACD Analysis") if tickerId in visualizedTickers else None)
     
     return analyzers
     
