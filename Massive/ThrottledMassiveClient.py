@@ -23,7 +23,7 @@ class ThrottledMassiveClient:
             lambda currentDate: print(f'Querying details for {ticker} on {currentDate.isoformat()}')
         )
         
-    def getTickerOpenCloseSummary(self, ticker: str, startDate: datetime.date, endDate: datetime.date):
+    def getTickerOpenCloseSummary(self, ticker: str, startDate: datetime.date, endDate: datetime.date) -> list[DailyTickerOpenCloseSummary]:
         
         assert startDate < endDate
             

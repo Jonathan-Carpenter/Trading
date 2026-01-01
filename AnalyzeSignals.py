@@ -36,7 +36,13 @@ dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
 startDate = datetime.date.fromisoformat("2024-01-01")
-endDate = datetime.date.fromisoformat("2024-04-01")
+endDate = datetime.date.fromisoformat("2025-12-01")
+
+simulateBearishMarket = False
+
+if simulateBearishMarket:
+    startDate = datetime.date.fromisoformat("2025-02-01")
+    endDate = datetime.date.fromisoformat("2025-04-11")
 
 amountInvestedPerTrade = 100
 
@@ -46,7 +52,7 @@ tickerIds = dbClient.getAllDailyTickerSymbols()
 # visualizedTickers = { "AAPL" }
 visualizedTickers = {}
 
-def getAnalyzers(tickerId: str) -> dict[str, Analyzer]:
+def getAnalyzers(tickerId: str, compositeConfigurations: list[tuple]) -> dict[str, Analyzer]:
     
     exponentialAverageCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
@@ -93,77 +99,30 @@ def getAnalyzers(tickerId: str) -> dict[str, Analyzer]:
         "Relative Strength Index Threshold": relativeStrengthIndexThresholdAnalyzer
     }
     
-    for i in range(1, 2):
+    for configuration in compositeConfigurations:
         
-        # scoreThreshold = i / 10
-        scoreThreshold = 0.5
+        emaWeight = configuration[0]
+        bollingerWeight = configuration[1]
+        macdWeight = configuration[2]
+        relativeStrengthIndexWeight = configuration[3]
+        windowSize = configuration[4]
         
-        analyzers[f"Composite EMA (1) + Bollinger (1) - Threshold {scoreThreshold:.2f}"] = CompositeAnalyzer(
-            amountInvestedPerTrade,
-            30,
-            scoreThreshold,
-            2,
-            [
-                (exponentialAverageCrossoverAnalyzer, 1),
-                (bollingerBandCrossoverAnalyzer, 1)
-            ],
-            CompositeVisualizer(f"{tickerId} Composite EMA + Bollinger Analysis") if tickerId in visualizedTickers else None)
-        
-    if True:
-        
-        for scoreThresholdSeed in range(0, 13, 3):
-            for emaWeight in range(0, 8):
-                for bollingerWeight in range(0, 8):
-                    for macdWeight in range(0, 8):
-                        for relativeStrengthIndexWeight in range(0, 8):
-                            for windowSize in range(35, 36):
-                                for confidenceRatioThresholdSeed in range(0, 21, 4):
-                
-                                    scoreThreshold = scoreThresholdSeed / 10.0
-                                    confidenceRatioThreshold = confidenceRatioThresholdSeed / 10.0
-                                    
-                                    analyzers[f"Composite EMA ({emaWeight}), Bollinger ({bollingerWeight}), MACD ({macdWeight}) + RSI ({relativeStrengthIndexWeight}) Analysis - Score Threshold {scoreThreshold:.2f} - Confidence Ratio Threshold {confidenceRatioThreshold:.2f} - Window Size {windowSize}"] = CompositeAnalyzer(
-                                        amountInvestedPerTrade,
-                                        windowSize,
-                                        scoreThreshold,
-                                        confidenceRatioThreshold,
-                                        [
-                                            (exponentialAverageCrossoverAnalyzer, emaWeight),
-                                            (bollingerBandCrossoverAnalyzer, bollingerWeight),
-                                            (movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight),
-                                            (relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight)
-                                        ],
-                                        CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger + MACD Analysis") if tickerId in visualizedTickers else None)
-    
-    if False:
-            
-        # Static values
-        # TODO: Do a big run over the ranges above. The static values below were only after running over 3/4 stocks, and don't perform very well at all.
-        scoreThreshold = 0.5
-        emaWeight = 3
-        bollingerWeight = 7
-        macdWeight = 6
-        relativeStrengthIndexWeight = 4
-        windowSize = 35
-        confidenceRatioThreshold = 2.1
-        
-        analyzers[f"Composite EMA ({emaWeight}), Bollinger ({bollingerWeight}), MACD ({macdWeight}) + RSI ({relativeStrengthIndexWeight}) Analysis - Score Threshold {scoreThreshold:.2f} - Confidence Ratio Threshold {confidenceRatioThreshold:.2f} - Window Size {windowSize}"] = CompositeAnalyzer(
+        analyzers[f"Composite Analysis - EMA ({emaWeight}), Bollinger ({bollingerWeight}), MACD ({macdWeight}) + RSI ({relativeStrengthIndexWeight}) - Window Size {windowSize}"] = CompositeAnalyzer(
             amountInvestedPerTrade,
             windowSize,
-            scoreThreshold,
-            confidenceRatioThreshold,
             [
                 (exponentialAverageCrossoverAnalyzer, emaWeight),
                 (bollingerBandCrossoverAnalyzer, bollingerWeight),
                 (movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight),
                 (relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight)
             ],
-            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger + MACD Analysis") if tickerId in visualizedTickers else None)
+            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in visualizedTickers else None)
     
     
     return analyzers
     
 profitPerAnalyzer: dict[str, float] = {}
+
 
 def printTop20Analyzers():
     analyzersByProfit = sorted(profitPerAnalyzer.items(), key=lambda analyzerProfit: analyzerProfit[1], reverse=True)
@@ -190,7 +149,35 @@ def printTop20Analyzers():
             
         print("")
 
-for key in getAnalyzers("SEED"):
+# emaWeight = configuration[0]
+# bollingerWeight = configuration[1]
+# macdWeight = configuration[2]
+# relativeStrengthIndexWeight = configuration[3]
+# windowSize = configuration[4]
+compositeConfigurations = [
+    (2, 6, 1, 1, 30)
+]
+
+if True:
+    
+    compositeConfigurations = []
+    
+    for emaWeight in range(0, 6):
+        for bollingerWeight in range(0, 6):
+            for macdWeight in range(0, 6):
+                for rsiWeight in range(0, 6):
+                    for windowSize in range(10, 101, 10):
+                        
+                        compositeConfigurations.append(
+                            (
+                                emaWeight,
+                                bollingerWeight,
+                                macdWeight,
+                                rsiWeight,
+                                windowSize
+                            ))
+
+for key in getAnalyzers("SEED", compositeConfigurations):
     profitPerAnalyzer[key] = 0
 
 for tickerId in tqdm(tickerIds):
@@ -214,7 +201,7 @@ for tickerId in tqdm(tickerIds):
     if len(closes) < (endDate - startDate).days / 2:
         continue
     
-    analyzersDict = getAnalyzers(tickerId)
+    analyzersDict = getAnalyzers(tickerId, compositeConfigurations)
         
     for key in tqdm(analyzersDict, leave=False):
                 

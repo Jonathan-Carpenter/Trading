@@ -83,23 +83,33 @@ class TradingDataClient:
             ticker[5],
             ticker[6])
         
-    def getLatestDailyTicker(self, symbol: str) -> DailyTickerOpenCloseSummary:
+    def isDailyTickerDataContiguousOverRange(self, symbol: str, startDate: datetime.date, endDate: datetime.date) -> bool:
         connection = sqlite3.connect(self.dbFileLocation)
         cursor = connection.cursor()
         
-        results = cursor.execute("SELECT symbol, date, open, close, high, low, volume FROM tickers WHERE symbol = ? ORDER BY date DESC LIMIT 1", (symbol,))
-        ticker = results.fetchone()
-        
+        results = cursor.execute("SELECT symbol, date, open, close, high, low, volume FROM tickers WHERE symbol = ? ORDER BY date", (symbol,))
+        tickers = results.fetchall()
         connection.close()
         
-        if not ticker:
-            return None
+        tickerDatesInRange = []
         
-        return DailyTickerOpenCloseSummary(
-            ticker[0],
-            datetime.date.fromisoformat(ticker[1]),
-            ticker[2],
-            ticker[3],
-            ticker[4],
-            ticker[5],
-            ticker[6])
+        for ticker in tickers:
+            date = datetime.date.fromisoformat(ticker[1])
+            
+            if (date >= startDate) and (date <= endDate):
+                tickerDatesInRange.append(date)
+        
+        if (not tickerDatesInRange) or (endDate - tickerDatesInRange[-1] > datetime.timedelta(days=4)):
+            return False
+        
+        previousDate = tickerDatesInRange[0]
+        
+        for i in range(1, len(tickerDatesInRange)):
+            date = tickerDatesInRange[i]
+            
+            if date - previousDate > datetime.timedelta(days=4):
+                return False
+            
+            previousDate = date
+        
+        return True
