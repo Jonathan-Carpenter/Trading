@@ -32,6 +32,9 @@ class CompositeAnalyzer(Analyzer):
       
     def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
+        if self.totalAnalyzerWeights == 0:
+            return AnalysisResult(0, [])
+        
         signalsWithWeightings: list[(TradingSignal, int)] = []
         
         for (analyzer, weighting) in self.analyzersWithWeightings:
