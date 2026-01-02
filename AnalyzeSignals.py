@@ -14,6 +14,7 @@ from Model.Analysis.MovingAverageConvergenceDivergenceCrossoverAnalyzer import M
 from Model.Analysis.MovingAverageConvergenceDivergenceCrossoverVisualizer import MovingAverageConvergenceDivergenceCrossoverVisualizer
 from Model.Analysis.RelativeStrengthIndexThresholdAnalyzer import RelativeStrengthIndexThresholdAnalyzer
 from Model.Analysis.RelativeStrengthIndexThresholdVisualizer import RelativeStrengthIndexThresholdVisualizer
+from Model.Analysis.WeightedAnalyzerConfiguration import WeightedAnalyzerConfiguration
 from Model.Indicators.MovingAverageConvergenceDivergenceCalculator import MovingAverageConvergenceDivergenceCalculator
 from Model.Indicators.RelativeStrengthIndexCalculator import RelativeStrengthIndexCalculator
 from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
@@ -41,8 +42,8 @@ endDate = datetime.date.fromisoformat("2025-12-01")
 simulateBearishMarket = False
 
 if simulateBearishMarket:
-    startDate = datetime.date.fromisoformat("2025-02-01")
-    endDate = datetime.date.fromisoformat("2025-04-11")
+    startDate = datetime.date.fromisoformat("2024-12-01")
+    endDate = datetime.date.fromisoformat("2025-06-01")
 
 amountInvestedPerTrade = 100
 
@@ -52,7 +53,7 @@ tickerIds = dbClient.getAllDailyTickerSymbols()
 # visualizedTickers = { "AAPL" }
 visualizedTickers = {}
 
-def getAnalyzers(tickerId: str, compositeConfigurations: list[tuple]) -> dict[str, Analyzer]:
+def getAnalyzers(tickerId: str, compositeConfigurations: list[list[tuple]]) -> dict[str, Analyzer]:
     
     exponentialAverageCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
@@ -101,22 +102,26 @@ def getAnalyzers(tickerId: str, compositeConfigurations: list[tuple]) -> dict[st
     
     for configuration in compositeConfigurations:
         
-        emaWeight = configuration[0]
-        bollingerWeight = configuration[1]
-        macdWeight = configuration[2]
-        relativeStrengthIndexWeight = configuration[3]
-        windowSize = configuration[4]
+        emaWeight = configuration[0][0]
+        emaWindowSize = configuration[0][1]
+        bollingerWeight = configuration[1][0]
+        bollingerWindowSize = configuration[1][1]
+        macdWeight = configuration[2][0]
+        macdWindowSize = configuration[2][1]
+        relativeStrengthIndexWeight = configuration[3][0]
+        relativeStrengthIndexWindowSize = configuration[3][1]
+        windowSize = configuration[4][0]
         
-        analyzers[f"Composite Analysis - EMA ({emaWeight}), Bollinger ({bollingerWeight}), MACD ({macdWeight}) + RSI ({relativeStrengthIndexWeight}) - Window Size {windowSize}"] = CompositeAnalyzer(
+        analyzers[f"Composite Analysis - EMA (wt={emaWeight}, wd={emaWindowSize}), Bollinger (wt={bollingerWeight}, wd={bollingerWindowSize}), MACD (wt={macdWeight}, wd={macdWindowSize}) + RSI (wt={relativeStrengthIndexWeight}, wd={relativeStrengthIndexWindowSize}) - Window Size {windowSize}"] = CompositeAnalyzer(
             amountInvestedPerTrade,
             windowSize,
             [
-                (exponentialAverageCrossoverAnalyzer, emaWeight),
-                (bollingerBandCrossoverAnalyzer, bollingerWeight),
-                (movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight),
-                (relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight)
+                WeightedAnalyzerConfiguration(exponentialAverageCrossoverAnalyzer, emaWeight, emaWindowSize),
+                WeightedAnalyzerConfiguration(bollingerBandCrossoverAnalyzer, bollingerWeight, bollingerWindowSize),
+                WeightedAnalyzerConfiguration(movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight, macdWindowSize),
+                WeightedAnalyzerConfiguration(relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight, relativeStrengthIndexWindowSize)
             ],
-            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in visualizedTickers else None)
+            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in tickerIds else None)
     
     
     return analyzers
@@ -149,33 +154,66 @@ def printTop20Analyzers():
             
         print("")
 
-# emaWeight = configuration[0]
-# bollingerWeight = configuration[1]
-# macdWeight = configuration[2]
-# relativeStrengthIndexWeight = configuration[3]
-# windowSize = configuration[4]
+# emaWeight = configuration[0][0]
+# emaWindowSize = configuration[0][1]
+# bollingerWeight = configuration[1][0]
+# bollingerWindowSize = configuration[1][1]
+# macdWeight = configuration[2][0]
+# macdWindowSize = configuration[2][1]
+# relativeStrengthIndexWeight = configuration[3][0]
+# relativeStrengthIndexWindowSize = configuration[3][1]
+# windowSize = configuration[4][0]
 compositeConfigurations = [
-    (2, 6, 1, 1, 30)
+    [(1, 30), (6, 5), (1, 30), (1, 30), (5,)],
+    # [(1, 30), (6, 5), (2, 30), (1, 30), (5,)],
+    # [(6, 30), (6, 5), (2, 30), (1, 30), (5,)],
+    # [(2, 30), (6, 5), (2, 30), (1, 30), (5,)],
+    # [(2, 30), (6, 5), (1, 30), (1, 30), (5,)],
+    # [(2, 5), (6, 5), (1, 30), (1, 30), (5,)],
+    # [(6, 30), (6, 5), (2, 1), (2, 5), (5,)],
+    # [(6, 30), (6, 5), (1, 30), (1, 30), (5,)],
+    # [(2, 5), (6, 5), (1, 30), (2, 30), (5,)],
+    # [(6, 30), (6, 5), (1, 5), (2, 5), (5,)],
+    # [(6, 30), (6, 5), (1, 1), (2, 5), (5,)],
+    # [(1, 30), (2, 5), (1, 5), (1, 30), (5,)],
+    # [(2, 5), (1, 5), (1, 30), (1, 5), (10,)],
+    # [(2, 1), (6, 5), (2, 30), (1, 30), (5,)],
+    # [(1, 5), (6, 5), (1, 30), (2, 30), (5,)],
+    # [(1, 5), (2, 5), (1, 1), (1, 30), (5,)],
+    # [(2, 30), (2, 5), (1, 1), (1, 5), (5,)],
+    # [(6, 5), (6, 5), (1, 1), (2, 30), (5,)],
+    # [(2, 5), (6, 5), (2, 30), (1, 30), (5,)],
 ]
 
-if True:
+if False:
     
     compositeConfigurations = []
     
-    for emaWeight in range(0, 6):
-        for bollingerWeight in range(0, 6):
-            for macdWeight in range(0, 6):
-                for rsiWeight in range(0, 6):
-                    for windowSize in range(10, 101, 10):
-                        
-                        compositeConfigurations.append(
-                            (
-                                emaWeight,
-                                bollingerWeight,
-                                macdWeight,
-                                rsiWeight,
-                                windowSize
-                            ))
+    possibleAnalyzerWeightings = [1, 2, 6]
+    possibleAnalyzerWindowSizes = [1, 5, 30]
+    possibleWindowSizes = [5, 10]
+    
+    for emaWeight in possibleAnalyzerWeightings:
+        for emaWindowSize in possibleAnalyzerWindowSizes:
+            
+            for bollingerWeight in possibleAnalyzerWeightings:
+                for bollingerWindowSize in possibleAnalyzerWindowSizes:
+                    
+                    for macdWeight in possibleAnalyzerWeightings:
+                        for macdWindowSize in possibleAnalyzerWindowSizes:
+                            
+                            for rsiWeight in possibleAnalyzerWeightings:
+                                for rsiWindowSize in possibleAnalyzerWindowSizes:
+                                    
+                                    for windowSize in possibleWindowSizes:
+                                        
+                                        compositeConfigurations.append([
+                                            (emaWeight, emaWindowSize),
+                                            (bollingerWeight, bollingerWindowSize),
+                                            (macdWeight, macdWindowSize),
+                                            (rsiWeight, rsiWindowSize),
+                                            (windowSize,),
+                                        ])
 
 for key in getAnalyzers("SEED", compositeConfigurations):
     profitPerAnalyzer[key] = 0
@@ -209,7 +247,7 @@ for tickerId in tqdm(tickerIds):
         
         profitPerAnalyzer[key] += analysisResult.totalProfit
         
-    if len(analyzersDict) > 100:
+    if len(analyzersDict) > 1000:
         printTop20Analyzers()
     
     print("")
