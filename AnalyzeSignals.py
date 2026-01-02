@@ -36,7 +36,7 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-startDate = datetime.date.fromisoformat("2024-01-01")
+startDate = datetime.date.fromisoformat("2021-02-01")
 endDate = datetime.date.fromisoformat("2025-12-01")
 
 simulateBearishMarket = False
@@ -111,17 +111,19 @@ def getAnalyzers(tickerId: str, compositeConfigurations: list[list[tuple]]) -> d
         relativeStrengthIndexWeight = configuration[3][0]
         relativeStrengthIndexWindowSize = configuration[3][1]
         windowSize = configuration[4][0]
+        threshold = configuration[4][1]
         
-        analyzers[f"Composite Analysis - EMA (wt={emaWeight}, wd={emaWindowSize}), Bollinger (wt={bollingerWeight}, wd={bollingerWindowSize}), MACD (wt={macdWeight}, wd={macdWindowSize}) + RSI (wt={relativeStrengthIndexWeight}, wd={relativeStrengthIndexWindowSize}) - Window Size {windowSize}"] = CompositeAnalyzer(
+        analyzers[f"Composite Analysis - EMA (wt={emaWeight}, wd={emaWindowSize}), Bollinger (wt={bollingerWeight}, wd={bollingerWindowSize}), MACD (wt={macdWeight}, wd={macdWindowSize}) + RSI (wt={relativeStrengthIndexWeight}, wd={relativeStrengthIndexWindowSize}) - Window Size {windowSize} - Threshold {threshold}"] = CompositeAnalyzer(
             amountInvestedPerTrade,
             windowSize,
+            threshold,
             [
                 WeightedAnalyzerConfiguration(exponentialAverageCrossoverAnalyzer, emaWeight, emaWindowSize),
                 WeightedAnalyzerConfiguration(bollingerBandCrossoverAnalyzer, bollingerWeight, bollingerWindowSize),
                 WeightedAnalyzerConfiguration(movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight, macdWindowSize),
                 WeightedAnalyzerConfiguration(relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight, relativeStrengthIndexWindowSize)
             ],
-            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in tickerIds else None)
+            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in visualizedTickers else None)
     
     
     return analyzers
@@ -163,35 +165,19 @@ def printTop20Analyzers():
 # relativeStrengthIndexWeight = configuration[3][0]
 # relativeStrengthIndexWindowSize = configuration[3][1]
 # windowSize = configuration[4][0]
+# threshold = configuration[4][1]
 compositeConfigurations = [
-    [(1, 30), (6, 5), (1, 30), (1, 30), (5,)],
-    # [(1, 30), (6, 5), (2, 30), (1, 30), (5,)],
-    # [(6, 30), (6, 5), (2, 30), (1, 30), (5,)],
-    # [(2, 30), (6, 5), (2, 30), (1, 30), (5,)],
-    # [(2, 30), (6, 5), (1, 30), (1, 30), (5,)],
-    # [(2, 5), (6, 5), (1, 30), (1, 30), (5,)],
-    # [(6, 30), (6, 5), (2, 1), (2, 5), (5,)],
-    # [(6, 30), (6, 5), (1, 30), (1, 30), (5,)],
-    # [(2, 5), (6, 5), (1, 30), (2, 30), (5,)],
-    # [(6, 30), (6, 5), (1, 5), (2, 5), (5,)],
-    # [(6, 30), (6, 5), (1, 1), (2, 5), (5,)],
-    # [(1, 30), (2, 5), (1, 5), (1, 30), (5,)],
-    # [(2, 5), (1, 5), (1, 30), (1, 5), (10,)],
-    # [(2, 1), (6, 5), (2, 30), (1, 30), (5,)],
-    # [(1, 5), (6, 5), (1, 30), (2, 30), (5,)],
-    # [(1, 5), (2, 5), (1, 1), (1, 30), (5,)],
-    # [(2, 30), (2, 5), (1, 1), (1, 5), (5,)],
-    # [(6, 5), (6, 5), (1, 1), (2, 30), (5,)],
-    # [(2, 5), (6, 5), (2, 30), (1, 30), (5,)],
+    [(1, 30), (6, 5), (1, 30), (1, 30), (5, 0.03)]
 ]
 
-if False:
+if True:
     
     compositeConfigurations = []
     
-    possibleAnalyzerWeightings = [1, 2, 6]
-    possibleAnalyzerWindowSizes = [1, 5, 30]
-    possibleWindowSizes = [5, 10]
+    possibleAnalyzerWeightings = [0, 1, 2, 6]
+    possibleAnalyzerWindowSizes = [5, 10, 30]
+    possibleWindowSizes = [1, 5, 20]
+    possibleThresholds = [0.03, 0.1, 0.2]
     
     for emaWeight in possibleAnalyzerWeightings:
         for emaWindowSize in possibleAnalyzerWindowSizes:
@@ -206,19 +192,23 @@ if False:
                                 for rsiWindowSize in possibleAnalyzerWindowSizes:
                                     
                                     for windowSize in possibleWindowSizes:
+                                        for threshold in possibleThresholds:
                                         
-                                        compositeConfigurations.append([
-                                            (emaWeight, emaWindowSize),
-                                            (bollingerWeight, bollingerWindowSize),
-                                            (macdWeight, macdWindowSize),
-                                            (rsiWeight, rsiWindowSize),
-                                            (windowSize,),
-                                        ])
+                                            compositeConfigurations.append([
+                                                (emaWeight, emaWindowSize),
+                                                (bollingerWeight, bollingerWindowSize),
+                                                (macdWeight, macdWindowSize),
+                                                (rsiWeight, rsiWindowSize),
+                                                (windowSize, threshold),
+                                            ])
 
 for key in getAnalyzers("SEED", compositeConfigurations):
     profitPerAnalyzer[key] = 0
 
 for tickerId in tqdm(tickerIds):
+    
+    if not dbClient.isDailyTickerDataContiguousOverRange(tickerId, startDate, endDate):
+        continue
 
     dates = []
     closes = []

@@ -14,11 +14,13 @@ class CompositeAnalyzer(Analyzer):
         self,
         amountInvestedPerTrade: int,
         windowSize: int,
+        threshold: float,
         analyzerConfigurations: list[WeightedAnalyzerConfiguration],
         visualizer: CompositeVisualizer | None):
         
-        super().__init__(amountInvestedPerTrade
+        super().__init__(amountInvestedPerTrade)
         self.windowSize = windowSize
+        self.threshold = threshold
         self.analyzerConfigurations = analyzerConfigurations
         self.visualizer = visualizer
         
@@ -107,26 +109,25 @@ class CompositeAnalyzer(Analyzer):
         
         previousAboveUpperThreshold = False
         previousBelowLowerThreshold = False
-        threshold = 0.03
         
         for i in range(length):
             
-            if (compositeStrengthIndexData[i] > threshold) and (not previousAboveUpperThreshold):
+            if (compositeStrengthIndexData[i] > self.threshold) and (not previousAboveUpperThreshold):
                 buySignal = BuySignal(sourceData[i], dates[i], self.id)
                 compositeSignals.append(buySignal)
                 
                 previousAboveUpperThreshold = True
                 
-            if (compositeStrengthIndexData[i] < -threshold) and (not previousBelowLowerThreshold):
+            if (compositeStrengthIndexData[i] < -self.threshold) and (not previousBelowLowerThreshold):
                 sellSignal = SellSignal(sourceData[i], dates[i], self.id)
                 compositeSignals.append(sellSignal)
                 
                 previousBelowLowerThreshold = True
                 
-            if compositeStrengthIndexData[i] < threshold:
+            if compositeStrengthIndexData[i] < self.threshold:
                 previousAboveUpperThreshold = False
                 
-            if compositeStrengthIndexData[i] > -threshold:
+            if compositeStrengthIndexData[i] > -self.threshold:
                 previousBelowLowerThreshold = False
         
         if rawSignals:

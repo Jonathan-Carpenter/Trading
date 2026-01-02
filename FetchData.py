@@ -20,9 +20,12 @@ dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
 tickerIds = Tickers().sp500tickers()
+# excludedTickers = { "COR", "CTRA", "FISV", "GEN", "META", "SOLS" }
+
+# tickerIds = [t for t in tickerIds if t not in excludedTickers]
 
 startDate = datetime.date.fromisoformat('2021-02-01')
-endDate = datetime.date.fromisoformat('2024-01-01')
+endDate = datetime.date.fromisoformat('2025-12-01')
 
 for tickerId in tickerIds:
     
