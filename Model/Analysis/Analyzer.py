@@ -1,4 +1,5 @@
 import datetime
+from Model.DailyTicker import DailyTickerOpenCloseSummary
 from Model.Signals.TradingSignal import TradingSignal
 from Model.Signals.BuySignal import BuySignal
 from Model.Signals.SellSignal import SellSignal
@@ -40,4 +41,7 @@ class Analyzer:
         return AnalysisResult(totalProfit, actionedSignals)
     
     def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
+        return None
+    
+    def analyzeTicker(self, tickerSymbol: str, startDate: datetime.date, endDate: datetime.date, windowSize: int, predictionLookAhead: int) -> AnalysisResult:
         return None

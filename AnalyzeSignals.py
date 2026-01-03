@@ -1,6 +1,7 @@
 import configparser
 import datetime
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from tqdm import tqdm
 
 from Data.TradingDataClient import TradingDataClient
@@ -12,6 +13,8 @@ from Model.Analysis.CompositeAnalyzer import CompositeAnalyzer
 from Model.Analysis.CompositeVisualizer import CompositeVisualizer
 from Model.Analysis.MovingAverageConvergenceDivergenceCrossoverAnalyzer import MovingAverageConvergenceDivergenceCrossoverAnalyzer
 from Model.Analysis.MovingAverageConvergenceDivergenceCrossoverVisualizer import MovingAverageConvergenceDivergenceCrossoverVisualizer
+from Model.Analysis.NeuralNetworkPredictionAnalyzer import NeuralNetworkPredictionAnalyzer
+from Model.Analysis.NeuralNetworkPredictionVisualizer import NeuralNetworkPredictionVisualizer
 from Model.Analysis.RelativeStrengthIndexThresholdAnalyzer import RelativeStrengthIndexThresholdAnalyzer
 from Model.Analysis.RelativeStrengthIndexThresholdVisualizer import RelativeStrengthIndexThresholdVisualizer
 from Model.Analysis.WeightedAnalyzerConfiguration import WeightedAnalyzerConfiguration
@@ -26,10 +29,14 @@ from Model.Analysis.ExponentialAverageCrossoverAnalyzer import ExponentialAverag
 from Model.Analysis.ExponentialAverageCrossoverVisualizer import ExponentialAverageCrossoverVisualizer
 from Model.Analysis.SimpleMarketTrackingAnalyzer import SimpleMarketTrackingAnalyzer
 from Model.Signals.MovingAverageConvergenceDivergenceCrossoverSignalDetector import MovingAverageConvergenceDivergenceCrossoverSignalDetector
+from Model.Signals.NeuralNetworkPredictionSignalDetector import NeuralNetworkPredictionSignalDetector
 from Model.Signals.RelativeStrengthIndexThresholdSignalDetector import RelativeStrengthIndexThresholdSignalDetector
+from ModelInputDataProvider import ModelInputDataProvider
 
 config = configparser.ConfigParser()
 config.read('dev.ini')
+
+modelFileLocation: str = config['tensorflow']['ModelFileLocation']
 
 dbFileLocation: str = config['database']['DatabaseFileLocation']
 
@@ -52,6 +59,8 @@ tickerIds = dbClient.getAllDailyTickerSymbols()
 
 # visualizedTickers = { "AAPL" }
 visualizedTickers = {}
+
+neuralNetworkModel = tf.keras.models.load_model(modelFileLocation)
 
 def getAnalyzers(tickerId: str, compositeConfigurations: list[list[tuple]]) -> dict[str, Analyzer]:
     
@@ -167,10 +176,10 @@ def printTop20Analyzers():
 # windowSize = configuration[4][0]
 # threshold = configuration[4][1]
 compositeConfigurations = [
-    [(1, 30), (6, 5), (1, 30), (1, 30), (5, 0.03)]
+    # [(1, 30), (6, 5), (1, 30), (1, 30), (5, 0.03)]
 ]
 
-if True:
+if False:
     
     compositeConfigurations = []
     
@@ -204,6 +213,7 @@ if True:
 
 for key in getAnalyzers("SEED", compositeConfigurations):
     profitPerAnalyzer[key] = 0
+    profitPerAnalyzer["Neural Network"] = 0
 
 for tickerId in tqdm(tickerIds):
     
@@ -230,12 +240,25 @@ for tickerId in tqdm(tickerIds):
         continue
     
     analyzersDict = getAnalyzers(tickerId, compositeConfigurations)
+    if len(analyzersDict) > 20:
+        analyzersDict = tqdm(analyzersDict, leave=False)
         
-    for key in tqdm(analyzersDict, leave=False):
+    for key in analyzersDict:
                 
         analysisResult = analyzersDict[key].analyze(tickerId, dates, closes)
         
         profitPerAnalyzer[key] += analysisResult.totalProfit
+    
+    neuralNetworkAnalyzer = NeuralNetworkPredictionAnalyzer(
+        amountInvestedPerTrade,
+        ModelInputDataProvider(dbClient),
+        neuralNetworkModel,
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 2),
+        NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
+    
+    analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 30, 10)
+    
+    profitPerAnalyzer["Neural Network"] += analysisResult.totalProfit
         
     if len(analyzersDict) > 1000:
         printTop20Analyzers()
