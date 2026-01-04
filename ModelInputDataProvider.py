@@ -1,15 +1,25 @@
 import datetime
-
 import numpy as np
-from tqdm import tqdm
-from Data.TradingDataClient import TradingDataClient
-from Model.DailyTicker import DailyTickerOpenCloseSummary
 
+from tqdm import tqdm
+from imblearn.over_sampling import RandomOverSampler
+
+from Data.TradingDataClient import TradingDataClient
 
 class ModelInputDataProvider:
     
     def __init__(self, dataClient: TradingDataClient):
         self.dataClient = dataClient
+        
+    def getLabelOversamplingClass(self, label: float):
+        
+        oversamplingThresholds = [110, 105, 102.5, 100, 97.5, 95, 90]
+        
+        for i in range(len(oversamplingThresholds)):
+            if label > oversamplingThresholds[i]:
+                return i
+            
+        return len(oversamplingThresholds)
         
     def getData(self, tickerIds: list[str], startDate: datetime.date, endDate: datetime.date, windowSize: int, predictionLookAhead: int):
         
@@ -29,6 +39,7 @@ class ModelInputDataProvider:
         
         inputs = np.zeros((perTickerInputCount * tickerCount, perInputLength))
         labels = np.zeros((perTickerInputCount * tickerCount, 1))
+        oversamplingLabels = np.zeros((perTickerInputCount * tickerCount, 1))
         
         skippedTickerCount = 0
         
@@ -49,7 +60,9 @@ class ModelInputDataProvider:
             # First windowSize elements do not have necessary data to make a predication
             # Last predictionLookAhead elements do not have necessary data to calculate loss
             for i in range(perTickerInputCount):
-                labels[tickerBaseIndex + i] = (tickers[i + windowSize + predictionLookAhead][2] / tickers[i + windowSize][2]) * 100 # set label with percentage look ahead change
+                label = (tickers[i + windowSize + predictionLookAhead][2] / tickers[i + windowSize][2]) * 100 # set label with percentage look ahead change
+                labels[tickerBaseIndex + i] = label
+                oversamplingLabels[tickerBaseIndex + i] = self.getLabelOversamplingClass(label)
             
             for i in range(perTickerInputCount):
                                 
@@ -68,25 +81,14 @@ class ModelInputDataProvider:
         if skippedInputCount > 0:
             inputs = inputs[:-skippedInputCount, :]
             labels = labels[:-skippedInputCount, :]
+            oversamplingLabels = oversamplingLabels[:-skippedInputCount, :]
             
-        # print(f"Inputs: {inputs.shape}")
-        # print(f"Labels: {labels.shape}")
-        # print(f"Dates: {len(dates)}")
-        # print(f"Closes: {closes.shape}")
-            
-        # print(labels)
-        # print(sum(labels))
-        # exit()
-            
-        if ((inputs.shape[0] != labels.shape[0] != len(dates) != closes.shape[0]) or
-            (inputs.shape[1] != perInputLength)):
-            
-            print("Error: Shape mismatch when fetching data.")
-            print(inputs.shape)
-            print(labels.shape)
-            print(len(dates))
-            print(closes.shape)
-            
-            exit()
+        inputs = np.hstack((inputs, labels))
+        
+        oversampler = RandomOverSampler()
+        inputs, _ = oversampler.fit_resample(inputs, oversamplingLabels)
+        
+        labels = inputs[:, -1]
+        inputs = inputs[:, : -1]
         
         return (inputs, labels, dates, closes)

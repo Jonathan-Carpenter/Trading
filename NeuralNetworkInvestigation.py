@@ -12,7 +12,7 @@ from sklearn import model_selection
 from Data.TradingDataClient import TradingDataClient
 from ModelInputDataProvider import ModelInputDataProvider
 
-np.set_printoptions(threshold=sys.maxsize)
+# np.set_printoptions(threshold=sys.maxsize)
 
 def plot_loss(history):
   plt.plot(history.history['loss'], label='loss')
