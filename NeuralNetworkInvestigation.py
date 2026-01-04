@@ -24,7 +24,7 @@ def plot_loss(history):
 
 
 startDate = datetime.date.fromisoformat("2021-02-01")
-endDate = datetime.date.fromisoformat("2025-12-01")
+endDate = datetime.date.fromisoformat("2023-12-01")
 windowSize = 30
 predictionLookAhead = 10
 

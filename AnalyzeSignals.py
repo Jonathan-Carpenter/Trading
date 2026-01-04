@@ -43,7 +43,7 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-startDate = datetime.date.fromisoformat("2021-02-01")
+startDate = datetime.date.fromisoformat("2024-01-01")
 endDate = datetime.date.fromisoformat("2025-12-01")
 
 simulateBearishMarket = False
@@ -253,7 +253,7 @@ for tickerId in tqdm(tickerIds):
         amountInvestedPerTrade,
         ModelInputDataProvider(dbClient),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 7.5),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 6.856),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
     analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 30, 10)
