@@ -55,7 +55,7 @@ if simulateBearishMarket:
 amountInvestedPerTrade = 100
 
 tickerIds = dbClient.getAllDailyTickerSymbols()
-# tickerIds = [ "AAPL" ]
+# tickerIds = [ "ABNB" ]
 
 # visualizedTickers = { "AAPL" }
 visualizedTickers = {}
@@ -253,7 +253,7 @@ for tickerId in tqdm(tickerIds):
         amountInvestedPerTrade,
         ModelInputDataProvider(dbClient),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 2),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 6.066),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
     analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 30, 10)

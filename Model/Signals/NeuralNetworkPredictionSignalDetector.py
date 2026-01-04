@@ -13,37 +13,22 @@ class NeuralNetworkPredictionSignalDetector:
         
         self.id = uuid.uuid4()
     
-    def detect(self, predictions, dates, closes) -> tuple[list[TradingSignal], list[float]]:
+    def detect(self, predictions, dates, closes):
         
         signals = []
-        predictedPercentages = [None] * len(dates)
         
         for i in range(len(predictions)):
             
             currentClose = closes[i]
             currentDate = dates[i]
             
-            predictedFutureClose = predictions[i]
-            
-            if predictedFutureClose == None:
+            if predictions[i] == None:
                 continue
             
-            if predictedFutureClose > currentClose:
-                ratio = predictedFutureClose / currentClose
-                percentageMove = (ratio * 100) - 100
+            if predictions[i] > 100 and predictions[i] > 100 + self.thresholdPercentage:
+                signals.append(BuySignal(currentClose, currentDate, self.id))
                 
-                predictedPercentages[i] = percentageMove
-                
-                if percentageMove > self.thresholdPercentage:
-                    signals.append(BuySignal(currentClose, currentDate, self.id))
-                
-            else:
-                ratio = currentClose / predictedFutureClose
-                percentageMove = 100 - (ratio * 100)
-                
-                predictedPercentages[i] = percentageMove
-                
-                if percentageMove < -self.thresholdPercentage:
-                    signals.append(SellSignal(currentClose, currentDate, self.id))
+            elif predictions[i] < 100 and predictions[i] < 100 - self.thresholdPercentage:
+                signals.append(SellSignal(currentClose, currentDate, self.id))
             
-        return (signals, predictedPercentages)
+        return signals

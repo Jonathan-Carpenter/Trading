@@ -33,15 +33,11 @@ class NeuralNetworkPredictionAnalyzer(Analyzer):
         inputs, _, dates, closes = self.dataProvider.getData([tickerSymbol], startDate, endDate, windowSize, predictionLookAhead)
         
         predictions = self.model.predict(inputs).flatten().tolist()
-        predictions = ([None] * windowSize) + predictions[:-predictionLookAhead]
-        signals, percentages = self.signalDetector.detect(predictions, dates, closes)
+        signals = self.signalDetector.detect(predictions, dates, closes)
         
         result = self.simulate(signals)
         
-        # Align prediction with actual over time - for the sake of easier comparison.
-        visualizedPredictions = predictions + ([None] * predictionLookAhead)
-        
         if self.visualizer:
-            self.visualizer.visualize(dates, closes, visualizedPredictions, percentages, result.actionedSignals)
+            self.visualizer.visualize(dates, closes, predictions, result.actionedSignals)
         
         return result

@@ -10,11 +10,10 @@ class NeuralNetworkPredictionVisualizer(Visualizer):
     def __init__(self, description: str):
         self.description = description
         
-    def visualize(self, dates: list[datetime.date], closes: list[float], predictions: list[float], percentages: list[float], signals: list[TradingSignal]):
+    def visualize(self, dates: list[datetime.date], closes: list[float], percentages: list[float], signals: list[TradingSignal]):
         fig, axs = plt.subplots(2, label=self.description, layout='constrained', sharex=True)
         
-        axs[0].plot(dates, closes, label="Actual")
-        axs[0].plot(dates, predictions, label="Predicted")
+        axs[0].plot(dates, closes)
         axs[0].set_xlabel("Date")
         axs[0].set_ylabel("Stock close price")
         

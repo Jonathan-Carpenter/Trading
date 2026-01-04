@@ -1,6 +1,8 @@
 import sqlite3
 import datetime
 
+import pandas as pd
+
 from Model.DailyTicker import DailyTickerOpenCloseSummary
 
 class TradingDataClient:
@@ -61,6 +63,20 @@ class TradingDataClient:
         
         connection.commit()
         connection.close()
+        
+    def getDailyTickers(self, symbol: str, startDate: datetime.date, endDate: datetime.date):
+        connection = sqlite3.connect(self.dbFileLocation)
+        
+        dataframe = pd.read_sql_query(
+            "SELECT date, open, close, high, low, volume FROM tickers WHERE symbol = ? AND date >= ? AND date < ? ORDER BY date ASC",
+            params=(symbol, startDate, endDate),
+            con=connection)
+        
+        connection.close()
+        
+        npArray = dataframe.to_numpy()
+        
+        return npArray
         
     def getDailyTicker(self, symbol: str, date: datetime.date) -> DailyTickerOpenCloseSummary:
         connection = sqlite3.connect(self.dbFileLocation)

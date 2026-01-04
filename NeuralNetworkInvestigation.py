@@ -1,18 +1,18 @@
 import configparser
 import datetime
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 import tensorflow as tf
-import tensorflow_hub as hub
 
 from sklearn import model_selection
-from tqdm import tqdm
 
 from Data.TradingDataClient import TradingDataClient
-from Model.DailyTicker import DailyTickerOpenCloseSummary
 from ModelInputDataProvider import ModelInputDataProvider
+
+np.set_printoptions(threshold=sys.maxsize)
 
 def plot_loss(history):
   plt.plot(history.history['loss'], label='loss')
@@ -23,12 +23,10 @@ def plot_loss(history):
   plt.grid(True)
 
 
-startDate = datetime.date.fromisoformat("2024-02-01")
+startDate = datetime.date.fromisoformat("2021-02-01")
 endDate = datetime.date.fromisoformat("2025-12-01")
 windowSize = 30
 predictionLookAhead = 10
-blockSize = 50
-
 
 config = configparser.ConfigParser()
 config.read('dev.ini')
@@ -59,9 +57,9 @@ if True:
 
     model = tf.keras.Sequential([
         normalizer,
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(16, activation='relu'),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dense(1)
     ])
 
@@ -72,12 +70,9 @@ if True:
 else:
     
     model = tf.keras.models.load_model(modelFileLocation)
-
-# for i in tqdm(range(0, len(allTickerIds), blockSize)):
-    # tickerIds = allTickerIds[i : min(i + blockSize, len(allTickerIds))]
     
 tickerIds = allTickerIds
-inputs, labels = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead)
+inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead)
 
 trainingInputs, tempInputs, trainingLabels, tempLabels = model_selection.train_test_split(inputs, labels, test_size=0.4, random_state=0)
 testInputs, validationInputs, testLabels, validationLabels = model_selection.train_test_split(tempInputs, tempLabels, test_size=0.5, random_state=0)
@@ -88,7 +83,7 @@ normalizer.mean.numpy()
 history = model.fit(
     trainingInputs,
     trainingLabels,
-    batch_size=50,
+    batch_size=20,
     epochs=500,
     validation_data=(validationInputs, validationLabels),
     callbacks=[
