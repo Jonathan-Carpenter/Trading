@@ -21,7 +21,7 @@ class ModelInputDataProvider:
             
         return len(oversamplingThresholds)
         
-    def getData(self, tickerIds: list[str], startDate: datetime.date, endDate: datetime.date, windowSize: int, predictionLookAhead: int):
+    def getData(self, tickerIds: list[str], startDate: datetime.date, endDate: datetime.date, windowSize: int, predictionLookAhead: int, oversample: bool = False):
         
         tickerIds = [t for t in tickerIds if self.dataClient.isDailyTickerDataContiguousOverRange(t, startDate, endDate)]
         
@@ -83,12 +83,13 @@ class ModelInputDataProvider:
             labels = labels[:-skippedInputCount, :]
             oversamplingLabels = oversamplingLabels[:-skippedInputCount, :]
             
-        inputs = np.hstack((inputs, labels))
-        
-        oversampler = RandomOverSampler()
-        inputs, _ = oversampler.fit_resample(inputs, oversamplingLabels)
-        
-        labels = inputs[:, -1]
-        inputs = inputs[:, : -1]
+        if oversample:            
+            inputs = np.hstack((inputs, labels))
+            
+            oversampler = RandomOverSampler()
+            inputs, _ = oversampler.fit_resample(inputs, oversamplingLabels)
+            
+            labels = inputs[:, -1]
+            inputs = inputs[:, : -1]
         
         return (inputs, labels, dates, closes)

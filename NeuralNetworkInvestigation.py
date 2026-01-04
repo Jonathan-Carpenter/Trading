@@ -18,7 +18,7 @@ def plot_loss(history):
   plt.plot(history.history['loss'], label='loss')
   plt.plot(history.history['val_loss'], label='val_loss')
   plt.xlabel('Epoch')
-  plt.ylabel('Error [MPG]')
+  plt.ylabel('Mean Squared Loss')
   plt.legend()
   plt.grid(True)
 
@@ -57,9 +57,10 @@ if True:
 
     model = tf.keras.Sequential([
         normalizer,
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Dense(1)
     ])
 
@@ -72,7 +73,7 @@ else:
     model = tf.keras.models.load_model(modelFileLocation)
     
 tickerIds = allTickerIds
-inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead)
+inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead, oversample=True)
 
 trainingInputs, tempInputs, trainingLabels, tempLabels = model_selection.train_test_split(inputs, labels, test_size=0.4, random_state=0)
 testInputs, validationInputs, testLabels, validationLabels = model_selection.train_test_split(tempInputs, tempLabels, test_size=0.5, random_state=0)
@@ -83,8 +84,8 @@ normalizer.mean.numpy()
 history = model.fit(
     trainingInputs,
     trainingLabels,
-    batch_size=20,
-    epochs=500,
+    batch_size=512,
+    epochs=512,
     validation_data=(validationInputs, validationLabels),
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
