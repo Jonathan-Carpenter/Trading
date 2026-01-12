@@ -1,5 +1,7 @@
 import statistics
 
+import numpy as np
+
 from Model.Indicators.AverageCalculator import AverageCalculator
 from Model.Indicators.UpperLowerBoundIndicatorData import UpperLowerBoundIndicatorData
 
@@ -14,12 +16,17 @@ class BollingerBandsCalculator:
         assert length > self.averageCalculator.windowSize
         
         averages = self.averageCalculator.calculate(sourceData).data
+        averages = np.array(averages)
+        averages = np.reshape(averages, (length, 1))
         
         windowStart = 0
-        windowEnd = self.averageCalculator.windowSize
+        windowEnd = 2
         
-        upperBandResults: list[float | None] = [None] * length
-        lowerBandResults: list[float | None] = [None] * length
+        upperBandResults = np.zeros((length, 1))
+        lowerBandResults = np.zeros((length, 1))
+        
+        upperBandResults[0:2, :] = averages[0:2, :]
+        lowerBandResults[0:2, :] = averages[0:2, :]
         
         while windowEnd < length:
             
@@ -33,7 +40,9 @@ class BollingerBandsCalculator:
             upperBandResults[windowEnd] = upperBand
             lowerBandResults[windowEnd] = lowerBand
             
-            windowStart += 1
+            if windowEnd >= self.averageCalculator.windowSize:
+                windowStart += 1
+                
             windowEnd += 1
             
         return UpperLowerBoundIndicatorData("Bollinger bands", averages, upperBandResults, lowerBandResults)

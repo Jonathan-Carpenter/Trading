@@ -13,16 +13,19 @@ class SimpleMovingAverageCalculator(AverageCalculator):
         assert length > self.windowSize
         
         results: list[float | None] = [None] * length
+        results[0] = sourceData[0]
         
         windowStart = 0
-        windowEnd = self.windowSize
+        windowEnd = 1
         
         while windowEnd < length:
             values = sourceData[windowStart:windowEnd]
             
             results[windowEnd] = sum(values) / len(values)
             
-            windowStart += 1
+            if windowEnd >= self.windowSize:
+                windowStart += 1
+            
             windowEnd += 1
             
         return IndicatorData(self.description, results)

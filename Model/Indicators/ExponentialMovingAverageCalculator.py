@@ -1,3 +1,4 @@
+import numpy as np
 from Model.Indicators.IndicatorData import IndicatorData
 from Model.Indicators.AverageCalculator import AverageCalculator
 
@@ -12,7 +13,7 @@ class ExponentialMovingAverageCalculator(AverageCalculator):
         
         assert length > 0
         
-        results: list[float] = [0] * length
+        results = np.zeros((length, 1))
         
         results[0] = sourceData[0]
         smoothingValue = 2 / (self.windowSize + 1)

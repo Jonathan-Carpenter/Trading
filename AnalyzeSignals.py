@@ -36,21 +36,21 @@ from ModelInputDataProvider import ModelInputDataProvider
 config = configparser.ConfigParser()
 config.read('dev.ini')
 
-modelFileLocation: str = config['tensorflow']['ModelFileLocation']
+modelFileLocation: str = config['tensorflow']['ModelSaveLocation']
 
 dbFileLocation: str = config['database']['DatabaseFileLocation']
 
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-startDate = datetime.date.fromisoformat("2024-01-01")
-endDate = datetime.date.fromisoformat("2025-12-01")
+startDate = datetime.date.fromisoformat("2021-01-01")
+endDate = datetime.date.fromisoformat("2026-01-01")
 
-simulateBearishMarket = False
+simulateBearishMarket = True
 
 if simulateBearishMarket:
     startDate = datetime.date.fromisoformat("2024-12-01")
-    endDate = datetime.date.fromisoformat("2025-06-01")
+    endDate = datetime.date.fromisoformat("2025-12-01")
 
 amountInvestedPerTrade = 100
 
@@ -251,12 +251,15 @@ for tickerId in tqdm(tickerIds):
     
     neuralNetworkAnalyzer = NeuralNetworkPredictionAnalyzer(
         amountInvestedPerTrade,
-        ModelInputDataProvider(dbClient),
+        ModelInputDataProvider(
+            dbClient,
+            [ExponentialMovingAverageCalculator(10, "EMA 10"), ExponentialMovingAverageCalculator(30, "EMA 30")],
+            [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))]),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 6.38),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 5.81),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
-    analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 30, 10)
+    analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 90, 10)
     
     profitPerAnalyzer["Neural Network"] += analysisResult.totalProfit
         

@@ -7,11 +7,20 @@ from imblearn.over_sampling import RandomOverSampler
 from scipy.stats import norm
 
 from Data.TradingDataClient import TradingDataClient
+from Model.Indicators.AverageCalculator import AverageCalculator
+from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
 
 class ModelInputDataProvider:
     
-    def __init__(self, dataClient: TradingDataClient):
+    def __init__(
+        self,
+        dataClient: TradingDataClient,
+        averageCalculators: list[AverageCalculator],
+        bandCalculators: list[BollingerBandsCalculator]):
+        
         self.dataClient = dataClient
+        self.averageCalculators = averageCalculators
+        self.bandCalculators = bandCalculators
         
     def getLabelOversamplingClass(self, label: float, oversamplingThresholds: list[float]):
         
@@ -21,7 +30,15 @@ class ModelInputDataProvider:
             
         return len(oversamplingThresholds)
         
-    def getData(self, tickerIds: list[str], startDate: datetime.date, endDate: datetime.date, windowSize: int, predictionLookAhead: int, oversample: bool = False, plotDistribution: bool = False):
+    def getData(
+        self,
+        tickerIds: list[str],
+        startDate: datetime.date,
+        endDate: datetime.date,
+        windowSize: int,
+        predictionLookAhead: int,
+        oversample: bool = False,
+        plotDistribution: bool = False):
         
         tickerIds = [t for t in tickerIds if self.dataClient.isDailyTickerDataContiguousOverRange(t, startDate, endDate)]
         
@@ -35,7 +52,7 @@ class ModelInputDataProvider:
         closes = sampleTickers[windowSize : lastPredictionBound, 2]
         
         perTickerInputCount = sampleTickers.shape[0] - windowSize - predictionLookAhead
-        perInputLength = 5 * windowSize # 5 = open, close, high, low, volume
+        perInputLength = (5 + len(self.averageCalculators) + (len(self.bandCalculators) * 3)) * windowSize # 5 = open, close, high, low, volume
         
         inputs = np.zeros((perTickerInputCount * tickerCount, perInputLength))
         labels = np.zeros((perTickerInputCount * tickerCount, 1))
@@ -50,10 +67,21 @@ class ModelInputDataProvider:
         for tickerId in tickerIds:
             
             tickers = self.dataClient.getDailyTickers(tickerId, startDate, endDate)
+            tickerCloses = tickers[:, 2]
             
             if tickers.shape[0] != sampleTickers.shape[0]:
                 skippedTickerCount += 1
                 continue
+            
+            for averageCalculator in self.averageCalculators:
+                averagesIndicatorData = averageCalculator.calculate(tickerCloses)
+                tickers = np.hstack((tickers, averagesIndicatorData.data))
+                
+            for bandCalculator in self.bandCalculators:
+                bandIndicatorData = bandCalculator.calculate(tickerCloses)
+                tickers = np.hstack((tickers, bandIndicatorData.lowerBoundData))
+                tickers = np.hstack((tickers, bandIndicatorData.data))
+                tickers = np.hstack((tickers, bandIndicatorData.upperBoundData))
             
             tickerBaseIndex = tickerIndex * perTickerInputCount
             
@@ -65,7 +93,7 @@ class ModelInputDataProvider:
             
             for i in range(perTickerInputCount):
                                 
-                windowTickers = tickers[i : i + windowSize, 1 : ]
+                windowTickers = tickers[i : i + windowSize, 1 : ] # 0th column is date
                 
                 inputs[tickerBaseIndex + i] = windowTickers.flatten() # input is backwards looking window of measured info
                 

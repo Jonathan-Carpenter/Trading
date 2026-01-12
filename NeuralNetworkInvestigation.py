@@ -10,6 +10,9 @@ import tensorflow as tf
 from sklearn import model_selection
 
 from Data.TradingDataClient import TradingDataClient
+from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
+from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
+from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
 from ModelInputDataProvider import ModelInputDataProvider
 
 # np.set_printoptions(threshold=sys.maxsize)
@@ -25,7 +28,7 @@ def plot_loss(history):
 
 startDate = datetime.date.fromisoformat("2021-02-01")
 endDate = datetime.date.fromisoformat("2023-12-01")
-windowSize = 30
+windowSize = 90
 predictionLookAhead = 10
 
 config = configparser.ConfigParser()
@@ -43,7 +46,7 @@ allTickerIds = dbClient.getAllDailyTickerSymbols()
 
 normalizer = tf.keras.layers.Normalization(axis=-1)
 
-if False:
+if True:
         
     print("\n###\nWARNING: TAKE A BACK-UP OF YOUR MODEL!\n###\n")
     print(f"This will begin training a NEW model. Any existing model file at {modelCheckpointLocation} and {modelSaveLocation} will be overwritten.")
@@ -66,7 +69,7 @@ if False:
     ])
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
         loss='mean_squared_error')
         
 else:
@@ -76,7 +79,17 @@ else:
     model = tf.keras.models.load_model(modelSaveLocation)
     
 tickerIds = allTickerIds
-inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead, oversample=True, plotDistribution=False)
+inputs, labels, _, _ = ModelInputDataProvider(
+    dbClient,
+    [ExponentialMovingAverageCalculator(10, "EMA 10"), ExponentialMovingAverageCalculator(30, "EMA 30")],
+    [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))]).getData(
+        tickerIds,
+        startDate,
+        endDate,
+        windowSize,
+        predictionLookAhead,
+        oversample=True,
+        plotDistribution=False)
 
 trainingInputs, tempInputs, trainingLabels, tempLabels = model_selection.train_test_split(inputs, labels, test_size=0.4, random_state=0)
 testInputs, validationInputs, testLabels, validationLabels = model_selection.train_test_split(tempInputs, tempLabels, test_size=0.5, random_state=0)
@@ -87,8 +100,8 @@ normalizer.mean.numpy()
 history = model.fit(
     trainingInputs,
     trainingLabels,
-    batch_size=64,
-    epochs=9999,
+    batch_size=128,
+    epochs=1000,
     validation_data=(validationInputs, validationLabels),
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
