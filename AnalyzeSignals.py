@@ -253,7 +253,7 @@ for tickerId in tqdm(tickerIds):
         amountInvestedPerTrade,
         ModelInputDataProvider(dbClient),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 6.856),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 6.38),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
     analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 30, 10)

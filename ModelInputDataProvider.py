@@ -102,7 +102,6 @@ class ModelInputDataProvider:
             ax.hist(labels, bins=bins, label="Original Samples", alpha=0.3)
             ax.set_xlabel("Label Value")
             ax.set_ylabel("log(Label Count)")
-            # ax.set_ylim(bottom=1)
             
             normalX = np.arange(oversamplingThresholds[-1], oversamplingThresholds[0], 0.5)
             normalY = norm.pdf(normalX, mu, std)

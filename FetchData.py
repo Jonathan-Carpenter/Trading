@@ -24,8 +24,8 @@ tickerIds = Tickers().sp500tickers()
 
 # tickerIds = [t for t in tickerIds if t not in excludedTickers]
 
-startDate = datetime.date.fromisoformat('2021-02-01')
-endDate = datetime.date.fromisoformat('2025-12-01')
+startDate = datetime.date.fromisoformat('2025-12-01')
+endDate = datetime.date.fromisoformat('2026-01-11')
 
 for tickerId in tickerIds:
     

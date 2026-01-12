@@ -31,7 +31,8 @@ predictionLookAhead = 10
 config = configparser.ConfigParser()
 config.read('dev.ini')
 
-modelFileLocation: str = config['tensorflow']['ModelFileLocation']
+modelCheckpointLocation: str = config['tensorflow']['ModelCheckpointLocation']
+modelSaveLocation: str = config['tensorflow']['ModelSaveLocation']
 
 dbFileLocation: str = config['database']['DatabaseFileLocation']
 
@@ -42,11 +43,11 @@ allTickerIds = dbClient.getAllDailyTickerSymbols()
 
 normalizer = tf.keras.layers.Normalization(axis=-1)
 
-if True:
+if False:
         
     print("\n###\nWARNING: TAKE A BACK-UP OF YOUR MODEL!\n###\n")
-    print(f"This will begin training a new model. When training is complete, any existing model file at {modelFileLocation} will be overwritten.")
-    print("")
+    print(f"This will begin training a NEW model. Any existing model file at {modelCheckpointLocation} and {modelSaveLocation} will be overwritten.")
+    print("If you would like to continue training an existing model, stop now!")
     print("Are you sure? (Y/N)")
     
     response = input()
@@ -65,15 +66,17 @@ if True:
     ])
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss='mean_squared_error')
         
 else:
     
-    model = tf.keras.models.load_model(modelFileLocation)
+    print(f"\n###\nContinuing training model from file at {modelSaveLocation}.\n###\n")
+    
+    model = tf.keras.models.load_model(modelSaveLocation)
     
 tickerIds = allTickerIds
-inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead, oversample=True)
+inputs, labels, _, _ = ModelInputDataProvider(dbClient).getData(tickerIds, startDate, endDate, windowSize, predictionLookAhead, oversample=True, plotDistribution=False)
 
 trainingInputs, tempInputs, trainingLabels, tempLabels = model_selection.train_test_split(inputs, labels, test_size=0.4, random_state=0)
 testInputs, validationInputs, testLabels, validationLabels = model_selection.train_test_split(tempInputs, tempLabels, test_size=0.5, random_state=0)
@@ -84,12 +87,13 @@ normalizer.mean.numpy()
 history = model.fit(
     trainingInputs,
     trainingLabels,
-    batch_size=512,
-    epochs=512,
+    batch_size=64,
+    epochs=9999,
     validation_data=(validationInputs, validationLabels),
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=modelFileLocation
+            filepath=modelCheckpointLocation,
+            save_best_only=True
         )
     ]
 )
@@ -101,4 +105,4 @@ print("\nEvaluate on test data\n")
 
 model.evaluate(testInputs, testLabels)
 
-model.save(modelFileLocation)
+model.save(modelSaveLocation)

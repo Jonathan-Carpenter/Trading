@@ -49,7 +49,7 @@ class ThrottledMassiveClient:
         return self.__doClientOperation(
             getSummary,
             startDate,
-            lambda _, currentDate: currentDate == endDate,
+            lambda _, currentDate: currentDate >= endDate,
             lambda _, currentDate: resolveState(currentDate),
             lambda currentDate: print(f'Querying open-close summary for {ticker} on {currentDate.isoformat()}')
         )
