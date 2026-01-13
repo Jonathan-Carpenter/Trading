@@ -1,5 +1,7 @@
 import datetime
 import uuid
+
+import numpy as np
 from Model.Indicators.UpperLowerBoundIndicatorData import UpperLowerBoundIndicatorData
 from Model.Signals.TradingSignal import TradingSignal
 from Model.Signals.BuySignal import BuySignal
@@ -10,21 +12,17 @@ class BollingerBandCrossoverSignalDetector:
     def __init__(self):
         self.id = uuid.uuid4()
     
-    def detect(self, dates: list[datetime.date], sourceData: list[float], bollingerData: UpperLowerBoundIndicatorData) -> list[TradingSignal]:
+    def detect(self, dates: list[datetime.date], sourceData: list[float], bollingerData: np.ndarray) -> list[TradingSignal]:
         
-        length = len(dates)
-        
-        assert length == len(sourceData) == len(bollingerData.data) == len(bollingerData.lowerBoundData) == len(bollingerData.upperBoundData)
-        
-        lowerBandData = bollingerData.lowerBoundData
-        upperBandData = bollingerData.upperBoundData
+        lowerBandData = bollingerData[:, 0]
+        upperBandData = bollingerData[:, 2]
         
         wasPreviousPriceBelowLowerBand = False
         wasPreviousPriceAboveUpperBand = False
         
         signals = []
         
-        for i in range(length):
+        for i in range(bollingerData.shape[0]):
             
             if (not lowerBandData[i]) or (not upperBandData[i]):
                 continue

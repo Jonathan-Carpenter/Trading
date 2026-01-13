@@ -113,7 +113,7 @@ class ModelInputDataProvider:
                 columnIndex += columnsPerBandCalculator
                 
             for macdCalculator in self.macdCalculators:
-                macdSignalData = macdCalculator.calculate(tickerCloses)[ : , 2 ] # just take the signal; we already have EMAs
+                macdSignalData = macdCalculator.calculate(tickerCloses)[ : , 3 ] # just take the signal; we already have EMAs
                 tickers[:, columnIndex] = macdSignalData
                 columnIndex += columnsPerMacdCalculator
             

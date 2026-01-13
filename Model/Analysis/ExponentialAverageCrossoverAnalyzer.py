@@ -25,8 +25,8 @@ class ExponentialAverageCrossoverAnalyzer(Analyzer):
     
     def analyze(self, tickerSymbol: str, dates: list[datetime.date], sourceData: list[float], rawSignals: bool = False) -> AnalysisResult | list[TradingSignal]:
         
-        shortTermAverageData = self.shortTermAverageCalculator.calculate(sourceData).data
-        longTermAverageData = self.longTermAverageCalculator.calculate(sourceData).data
+        shortTermAverageData = self.shortTermAverageCalculator.calculate(sourceData)
+        longTermAverageData = self.longTermAverageCalculator.calculate(sourceData)
         
         signals = self.signalDetector.detect(dates, sourceData, shortTermAverageData, longTermAverageData)
         

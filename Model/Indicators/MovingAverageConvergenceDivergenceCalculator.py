@@ -27,16 +27,17 @@ class MovingAverageConvergenceDivergenceCalculator:
         Returns np array with shape (sourceData.shape[0], 3). Columns of returned array are:
         - 0 = short term average data
         - 1 = long term average data
-        - 2 = MACD signal
+        - 2 = divergence data
+        - 3 = MACD signal
         '''
         
-        results = np.zeros((sourceData.shape[0], 3))
+        results = np.zeros((sourceData.shape[0], 4))
         
         results[ : , 0 ] = self.shortTermAverageCalculator.calculate(sourceData)
         results[ : , 1 ] = self.longTermAverageCalculator.calculate(sourceData)
         
-        divergenceData = results[ : , 0 ] - results[ : , 1 ]
+        results[ : , 2 ] = results[ : , 0 ] - results[ : , 1 ]
         
-        results[ : , 2 ] = self.signalCalculator.calculate(divergenceData)
+        results[ : , 3 ] = self.signalCalculator.calculate(results[ : , 2 ])
         
         return results

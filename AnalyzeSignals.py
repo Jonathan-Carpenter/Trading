@@ -1,6 +1,7 @@
 import configparser
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 
@@ -46,7 +47,7 @@ dbClient.ensureSeeded()
 startDate = datetime.date.fromisoformat("2021-01-01")
 endDate = datetime.date.fromisoformat("2026-01-01")
 
-simulateBearishMarket = False
+simulateBearishMarket = True
 
 if simulateBearishMarket:
     startDate = datetime.date.fromisoformat("2024-12-01")
@@ -62,7 +63,7 @@ visualizedTickers = {}
 
 neuralNetworkModel = tf.keras.models.load_model(modelFileLocation)
 
-def getAnalyzers(tickerId: str, compositeConfigurations: list[list[tuple]]) -> dict[str, Analyzer]:
+def getAnalyzers(tickerId: str) -> dict[str, Analyzer]:
     
     exponentialAverageCrossoverAnalyzer = CachingAnalyzer(
         amountInvestedPerTrade,
@@ -107,38 +108,14 @@ def getAnalyzers(tickerId: str, compositeConfigurations: list[list[tuple]]) -> d
         "Bollinger Band Crossover": bollingerBandCrossoverAnalyzer,
         "Moving Average Convergence Divergence Crossover": movingAverageConvergenceDivergenceCrossoverAnalyzer,
         "Relative Strength Index Threshold": relativeStrengthIndexThresholdAnalyzer
-    }
-    
-    for configuration in compositeConfigurations:
-        
-        emaWeight = configuration[0][0]
-        emaWindowSize = configuration[0][1]
-        bollingerWeight = configuration[1][0]
-        bollingerWindowSize = configuration[1][1]
-        macdWeight = configuration[2][0]
-        macdWindowSize = configuration[2][1]
-        relativeStrengthIndexWeight = configuration[3][0]
-        relativeStrengthIndexWindowSize = configuration[3][1]
-        windowSize = configuration[4][0]
-        threshold = configuration[4][1]
-        
-        analyzers[f"Composite Analysis - EMA (wt={emaWeight}, wd={emaWindowSize}), Bollinger (wt={bollingerWeight}, wd={bollingerWindowSize}), MACD (wt={macdWeight}, wd={macdWindowSize}) + RSI (wt={relativeStrengthIndexWeight}, wd={relativeStrengthIndexWindowSize}) - Window Size {windowSize} - Threshold {threshold}"] = CompositeAnalyzer(
-            amountInvestedPerTrade,
-            windowSize,
-            threshold,
-            [
-                WeightedAnalyzerConfiguration(exponentialAverageCrossoverAnalyzer, emaWeight, emaWindowSize),
-                WeightedAnalyzerConfiguration(bollingerBandCrossoverAnalyzer, bollingerWeight, bollingerWindowSize),
-                WeightedAnalyzerConfiguration(movingAverageConvergenceDivergenceCrossoverAnalyzer, macdWeight, macdWindowSize),
-                WeightedAnalyzerConfiguration(relativeStrengthIndexThresholdAnalyzer, relativeStrengthIndexWeight, relativeStrengthIndexWindowSize)
-            ],
-            CompositeVisualizer(f"{tickerId} Composite EMA, Bollinger, MACD, RSI Analysis") if tickerId in visualizedTickers else None)
-    
+    }    
     
     return analyzers
     
-profitPerAnalyzer: dict[str, float] = {}
+profitPerAnalyzer: dict[str, float] = { "Neural Network": 0 }
 
+for key in getAnalyzers("SEED"):
+    profitPerAnalyzer[key] = 0
 
 def printTop20Analyzers():
     analyzersByProfit = sorted(profitPerAnalyzer.items(), key=lambda analyzerProfit: analyzerProfit[1], reverse=True)
@@ -165,56 +142,6 @@ def printTop20Analyzers():
             
         print("")
 
-# emaWeight = configuration[0][0]
-# emaWindowSize = configuration[0][1]
-# bollingerWeight = configuration[1][0]
-# bollingerWindowSize = configuration[1][1]
-# macdWeight = configuration[2][0]
-# macdWindowSize = configuration[2][1]
-# relativeStrengthIndexWeight = configuration[3][0]
-# relativeStrengthIndexWindowSize = configuration[3][1]
-# windowSize = configuration[4][0]
-# threshold = configuration[4][1]
-compositeConfigurations = [
-    # [(1, 30), (6, 5), (1, 30), (1, 30), (5, 0.03)]
-]
-
-if False:
-    
-    compositeConfigurations = []
-    
-    possibleAnalyzerWeightings = [0, 1, 2, 6]
-    possibleAnalyzerWindowSizes = [5, 10, 30]
-    possibleWindowSizes = [1, 5, 20]
-    possibleThresholds = [0.03, 0.1, 0.2]
-    
-    for emaWeight in possibleAnalyzerWeightings:
-        for emaWindowSize in possibleAnalyzerWindowSizes:
-            
-            for bollingerWeight in possibleAnalyzerWeightings:
-                for bollingerWindowSize in possibleAnalyzerWindowSizes:
-                    
-                    for macdWeight in possibleAnalyzerWeightings:
-                        for macdWindowSize in possibleAnalyzerWindowSizes:
-                            
-                            for rsiWeight in possibleAnalyzerWeightings:
-                                for rsiWindowSize in possibleAnalyzerWindowSizes:
-                                    
-                                    for windowSize in possibleWindowSizes:
-                                        for threshold in possibleThresholds:
-                                        
-                                            compositeConfigurations.append([
-                                                (emaWeight, emaWindowSize),
-                                                (bollingerWeight, bollingerWindowSize),
-                                                (macdWeight, macdWindowSize),
-                                                (rsiWeight, rsiWindowSize),
-                                                (windowSize, threshold),
-                                            ])
-
-for key in getAnalyzers("SEED", compositeConfigurations):
-    profitPerAnalyzer[key] = 0
-    profitPerAnalyzer["Neural Network"] = 0
-
 for tickerId in tqdm(tickerIds):
     
     if not dbClient.isDailyTickerDataContiguousOverRange(tickerId, startDate, endDate):
@@ -239,13 +166,13 @@ for tickerId in tqdm(tickerIds):
     if len(closes) < (endDate - startDate).days / 2:
         continue
     
-    analyzersDict = getAnalyzers(tickerId, compositeConfigurations)
+    analyzersDict = getAnalyzers(tickerId)
     if len(analyzersDict) > 20:
         analyzersDict = tqdm(analyzersDict, leave=False)
         
     for key in analyzersDict:
                 
-        analysisResult = analyzersDict[key].analyze(tickerId, dates, closes)
+        analysisResult = analyzersDict[key].analyze(tickerId, dates, np.array(closes))
         
         profitPerAnalyzer[key] += analysisResult.totalProfit
     
@@ -254,9 +181,14 @@ for tickerId in tqdm(tickerIds):
         ModelInputDataProvider(
             dbClient,
             [ExponentialMovingAverageCalculator(10, "EMA 10"), ExponentialMovingAverageCalculator(30, "EMA 30")],
-            [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))]),
+            [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))],
+            [MovingAverageConvergenceDivergenceCalculator(
+                "Moving Average Convergence Divergence",
+                ExponentialMovingAverageCalculator(12, "12 Day EMA"),
+                ExponentialMovingAverageCalculator(26, "26 Day EMA"),
+                ExponentialMovingAverageCalculator(9, "9 Day EMA"))]),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 5.81),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 5.413),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
     analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 90, 10)
