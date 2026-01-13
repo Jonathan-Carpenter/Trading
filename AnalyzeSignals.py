@@ -46,7 +46,7 @@ dbClient.ensureSeeded()
 startDate = datetime.date.fromisoformat("2021-01-01")
 endDate = datetime.date.fromisoformat("2026-01-01")
 
-simulateBearishMarket = True
+simulateBearishMarket = False
 
 if simulateBearishMarket:
     startDate = datetime.date.fromisoformat("2024-12-01")

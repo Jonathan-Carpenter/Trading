@@ -9,24 +9,32 @@ class BollingerBandsCalculator:
     def __init__(self, averageCalculator: AverageCalculator):
         self.averageCalculator = averageCalculator
         
-    def calculate(self, sourceData: list[float]) -> UpperLowerBoundIndicatorData:
+    def calculate(
+        self,
+        sourceData: np.ndarray) -> np.ndarray:
+        '''Calculates Bollinger Bands for the given data.
         
-        length = len(sourceData)
+        Keyword arguments:
+        sourceData -- The source data column matrix used as input for the calculation.
+                
+        Returns np array with shape (sourceData.shape[0], 3). Columns of returned array are:
+        - 0 = lower bound
+        - 1 = average
+        - 2 = upper bound
+        '''
+        
+        length = sourceData.shape[0]
         
         assert length > self.averageCalculator.windowSize
         
-        averages = self.averageCalculator.calculate(sourceData).data
-        averages = np.array(averages)
-        averages = np.reshape(averages, (length, 1))
+        results = np.zeros((sourceData.shape[0], 3))
+        
+        results[ : , 1 ] = self.averageCalculator.calculate(sourceData)
+        results[ 0 : 2 , 0 ] = results[ 0 : 2, 1 ]
+        results[ 0 : 2 , 2 ] = results[ 0 : 2, 1 ]
         
         windowStart = 0
         windowEnd = 2
-        
-        upperBandResults = np.zeros((length, 1))
-        lowerBandResults = np.zeros((length, 1))
-        
-        upperBandResults[0:2, :] = averages[0:2, :]
-        lowerBandResults[0:2, :] = averages[0:2, :]
         
         while windowEnd < length:
             
@@ -34,15 +42,15 @@ class BollingerBandsCalculator:
             standardDeviation = statistics.stdev(window)
             
             bollingerDeviation = 2 * standardDeviation
-            upperBand = averages[windowEnd] + bollingerDeviation
-            lowerBand = averages[windowEnd] - bollingerDeviation
+            lowerBand = results[windowEnd][1] - bollingerDeviation
+            upperBand = results[windowEnd][1] + bollingerDeviation
             
-            upperBandResults[windowEnd] = upperBand
-            lowerBandResults[windowEnd] = lowerBand
+            results[windowEnd][0] = lowerBand
+            results[windowEnd][2] = upperBand
             
             if windowEnd >= self.averageCalculator.windowSize:
                 windowStart += 1
                 
             windowEnd += 1
             
-        return UpperLowerBoundIndicatorData("Bollinger bands", averages, upperBandResults, lowerBandResults)
+        return results

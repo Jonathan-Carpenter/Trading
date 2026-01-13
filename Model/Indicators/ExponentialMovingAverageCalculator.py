@@ -7,13 +7,20 @@ class ExponentialMovingAverageCalculator(AverageCalculator):
     def __init__(self, windowSize: int, description: str):
         super().__init__(windowSize, description)
     
-    def calculate(self, sourceData: list[float]) -> IndicatorData:
+    def calculate(self, sourceData: np.ndarray) -> np.ndarray:
+        '''Calculates averages for the given data.
         
-        length = len(sourceData)
+        Keyword arguments:
+        sourceData -- The source data column matrix used as input for the calculation.
+                
+        Returns np array with equal shape to input.
+        '''
+        
+        length = sourceData.shape[0]
         
         assert length > 0
         
-        results = np.zeros((length, 1))
+        results = np.zeros(sourceData.shape)
         
         results[0] = sourceData[0]
         smoothingValue = 2 / (self.windowSize + 1)
@@ -26,4 +33,4 @@ class ExponentialMovingAverageCalculator(AverageCalculator):
             newAverage = weightedCurrentValue + weightedPreviousAverage
             results[i] = newAverage
             
-        return IndicatorData(self.description, results)
+        return results

@@ -51,8 +51,18 @@ class ModelInputDataProvider:
         dates = [datetime.date.fromisoformat(date) for date in sampleTickers[windowSize : lastPredictionBound, 0]]
         closes = sampleTickers[windowSize : lastPredictionBound, 2]
         
+        columnsPerAverageCalculator = 1
+        columnsPerBandCalculator = 3 # 3 = lower, average, upper
+        
+        calculatedDataColumns = (
+            (len(self.averageCalculators) * columnsPerAverageCalculator) +
+            (len(self.bandCalculators) * columnsPerBandCalculator))
+        
+        columnsPerRawTicker = 6 # 6 = date, open, close, high, low, volume
+        columnsPerTickerWithData = columnsPerRawTicker + calculatedDataColumns
+        
         perTickerInputCount = sampleTickers.shape[0] - windowSize - predictionLookAhead
-        perInputLength = (5 + len(self.averageCalculators) + (len(self.bandCalculators) * 3)) * windowSize # 5 = open, close, high, low, volume
+        perInputLength = (columnsPerTickerWithData - 1) * windowSize # -1 for removal of date column
         
         inputs = np.zeros((perTickerInputCount * tickerCount, perInputLength))
         labels = np.zeros((perTickerInputCount * tickerCount, 1))
@@ -62,30 +72,51 @@ class ModelInputDataProvider:
         
         if len(tickerIds) > 10:
             print("\n###\nForming model input data from ticker data\n###\n")
+            print(f"Per ticker input count: {perTickerInputCount}")
+            print(f"Per input length: {perInputLength}")
+            print(f"Ticker count: {tickerCount}")
+            print(f"Inputs matrix shape: {inputs.shape}")
+            print("")
+            
             tickerIds = tqdm(tickerIds, leave=False)
 
         for tickerId in tickerIds:
             
-            tickers = self.dataClient.getDailyTickers(tickerId, startDate, endDate)
-            tickerCloses = tickers[:, 2]
+            rawDailyTickers = self.dataClient.getDailyTickers(tickerId, startDate, endDate)
             
-            if tickers.shape[0] != sampleTickers.shape[0]:
+            if rawDailyTickers.shape != sampleTickers.shape:
                 skippedTickerCount += 1
                 continue
             
+            tickers = np.zeros((rawDailyTickers.shape[0], columnsPerTickerWithData))
+            
+            # print(f"Tickers with data: {tickers.shape}")
+            
+            tickers[ : , 1 : 6] = rawDailyTickers[ : , 1 : ]
+            tickerCloses = tickers[:, 2]
+            
+            columnIndex = 6 # after 5 raw data columns
+            
             for averageCalculator in self.averageCalculators:
                 averagesIndicatorData = averageCalculator.calculate(tickerCloses)
-                tickers = np.hstack((tickers, averagesIndicatorData.data))
+                tickers[:, columnIndex] = averagesIndicatorData
+                columnIndex += columnsPerAverageCalculator
                 
             for bandCalculator in self.bandCalculators:
                 bandIndicatorData = bandCalculator.calculate(tickerCloses)
-                tickers = np.hstack((tickers, bandIndicatorData.lowerBoundData))
-                tickers = np.hstack((tickers, bandIndicatorData.data))
-                tickers = np.hstack((tickers, bandIndicatorData.upperBoundData))
+                tickers[:, columnIndex : columnIndex + columnsPerBandCalculator + 1] = bandIndicatorData # +1 for bounds
+                columnIndex += columnsPerBandCalculator
+            
+            #    0       1       2        3       4      5         6             
+            #    date    open    close    high    low    volume    avg1    avg2    band1a    band1b    band1c    band2a    band2b    band2c
+            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
             
             tickerBaseIndex = tickerIndex * perTickerInputCount
             
-            # First windowSize elements do not have necessary data to make a predication
+            # First windowSize elements do not have necessary data to make a prediction
             # Last predictionLookAhead elements do not have necessary data to calculate loss
             for i in range(perTickerInputCount):
                 label = (tickers[i + windowSize + predictionLookAhead][2] / tickers[i + windowSize][2]) * 100 # set label with percentage look ahead change
@@ -94,6 +125,8 @@ class ModelInputDataProvider:
             for i in range(perTickerInputCount):
                                 
                 windowTickers = tickers[i : i + windowSize, 1 : ] # 0th column is date
+                
+                # print(f"Window tickers: {windowTickers.shape}")
                 
                 inputs[tickerBaseIndex + i] = windowTickers.flatten() # input is backwards looking window of measured info
                 
