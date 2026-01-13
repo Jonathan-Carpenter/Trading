@@ -12,6 +12,7 @@ from sklearn import model_selection
 from Data.TradingDataClient import TradingDataClient
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
 from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
+from Model.Indicators.MovingAverageConvergenceDivergenceCalculator import MovingAverageConvergenceDivergenceCalculator
 from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
 from ModelInputDataProvider import ModelInputDataProvider
 
@@ -82,7 +83,13 @@ tickerIds = allTickerIds
 inputs, labels, _, _ = ModelInputDataProvider(
     dbClient,
     [ExponentialMovingAverageCalculator(10, "EMA 10"), ExponentialMovingAverageCalculator(30, "EMA 30")],
-    [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))]).getData(
+    [BollingerBandsCalculator(SimpleMovingAverageCalculator(20, "SMA 20"))],
+    [MovingAverageConvergenceDivergenceCalculator(
+        "Moving Average Convergence Divergence",
+        ExponentialMovingAverageCalculator(12, "12 Day EMA"),
+        ExponentialMovingAverageCalculator(26, "26 Day EMA"),
+        ExponentialMovingAverageCalculator(9, "9 Day EMA"))]
+    ).getData(
         tickerIds,
         startDate,
         endDate,

@@ -1,3 +1,4 @@
+import numpy as np
 from Model.Indicators.AverageCalculator import AverageCalculator
 from Model.Indicators.IndicatorData import IndicatorData
 from Model.Indicators.MovingAverageConvergenceDivergenceIndicatorData import MovingAverageConvergenceDivergenceIndicatorData
@@ -17,13 +18,25 @@ class MovingAverageConvergenceDivergenceCalculator:
         self.longTermAverageCalculator = longTermAverageCalculator
         self.signalCalculator = signalCalculator
         
-    def calculate(self, sourceData: list[float]) -> MovingAverageConvergenceDivergenceIndicatorData:
+    def calculate(self, sourceData: np.ndarray) -> np.ndarray:
+        '''Calculates a MACD indicator for the given data.
         
-        shortTermAverageData = self.shortTermAverageCalculator.calculate(sourceData).data
-        longTermAverageData = self.longTermAverageCalculator.calculate(sourceData).data
+        Keyword arguments:
+        sourceData -- The source data column matrix used as input for the calculation.
+                
+        Returns np array with shape (sourceData.shape[0], 3). Columns of returned array are:
+        - 0 = short term average data
+        - 1 = long term average data
+        - 2 = MACD signal
+        '''
         
-        movingAverageConvergenceDivergenceData = [short - long for (short, long) in zip(shortTermAverageData, longTermAverageData)]
+        results = np.zeros((sourceData.shape[0], 3))
         
-        signalData = self.signalCalculator.calculate(movingAverageConvergenceDivergenceData).data
+        results[ : , 0 ] = self.shortTermAverageCalculator.calculate(sourceData)
+        results[ : , 1 ] = self.longTermAverageCalculator.calculate(sourceData)
         
-        return MovingAverageConvergenceDivergenceIndicatorData(self.description, shortTermAverageData, longTermAverageData, movingAverageConvergenceDivergenceData, signalData)
+        divergenceData = results[ : , 0 ] - results[ : , 1 ]
+        
+        results[ : , 2 ] = self.signalCalculator.calculate(divergenceData)
+        
+        return results

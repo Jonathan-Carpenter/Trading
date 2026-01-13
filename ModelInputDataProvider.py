@@ -9,6 +9,7 @@ from scipy.stats import norm
 from Data.TradingDataClient import TradingDataClient
 from Model.Indicators.AverageCalculator import AverageCalculator
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
+from Model.Indicators.MovingAverageConvergenceDivergenceCalculator import MovingAverageConvergenceDivergenceCalculator
 
 class ModelInputDataProvider:
     
@@ -16,11 +17,13 @@ class ModelInputDataProvider:
         self,
         dataClient: TradingDataClient,
         averageCalculators: list[AverageCalculator],
-        bandCalculators: list[BollingerBandsCalculator]):
+        bandCalculators: list[BollingerBandsCalculator],
+        macdCalculators: list[MovingAverageConvergenceDivergenceCalculator]):
         
         self.dataClient = dataClient
         self.averageCalculators = averageCalculators
         self.bandCalculators = bandCalculators
+        self.macdCalculators = macdCalculators
         
     def getLabelOversamplingClass(self, label: float, oversamplingThresholds: list[float]):
         
@@ -53,10 +56,12 @@ class ModelInputDataProvider:
         
         columnsPerAverageCalculator = 1
         columnsPerBandCalculator = 3 # 3 = lower, average, upper
+        columnsPerMacdCalculator = 1
         
         calculatedDataColumns = (
             (len(self.averageCalculators) * columnsPerAverageCalculator) +
-            (len(self.bandCalculators) * columnsPerBandCalculator))
+            (len(self.bandCalculators) * columnsPerBandCalculator) +
+            (len(self.macdCalculators) * columnsPerMacdCalculator))
         
         columnsPerRawTicker = 6 # 6 = date, open, close, high, low, volume
         columnsPerTickerWithData = columnsPerRawTicker + calculatedDataColumns
@@ -104,15 +109,20 @@ class ModelInputDataProvider:
                 
             for bandCalculator in self.bandCalculators:
                 bandIndicatorData = bandCalculator.calculate(tickerCloses)
-                tickers[:, columnIndex : columnIndex + columnsPerBandCalculator + 1] = bandIndicatorData # +1 for bounds
+                tickers[:, columnIndex : columnIndex + columnsPerBandCalculator] = bandIndicatorData
                 columnIndex += columnsPerBandCalculator
+                
+            for macdCalculator in self.macdCalculators:
+                macdSignalData = macdCalculator.calculate(tickerCloses)[ : , 2 ] # just take the signal; we already have EMAs
+                tickers[:, columnIndex] = macdSignalData
+                columnIndex += columnsPerMacdCalculator
             
             #    0       1       2        3       4      5         6             
-            #    date    open    close    high    low    volume    avg1    avg2    band1a    band1b    band1c    band2a    band2b    band2c
-            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .         .         .
+            #    date    open    close    high    low    volume    avg1    avg2    band1a    band1b    band1c    macd_sig1
+            #    .       .       .        .       .      .         .       .       .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .
+            #    .       .       .        .       .      .         .       .       .         .         .         .
             
             tickerBaseIndex = tickerIndex * perTickerInputCount
             
