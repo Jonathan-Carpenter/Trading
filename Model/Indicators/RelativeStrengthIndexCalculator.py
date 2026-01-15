@@ -1,3 +1,4 @@
+import numpy as np
 from Model.Indicators.IndicatorData import IndicatorData
 
 class RelativeStrengthIndexCalculator:
@@ -5,7 +6,7 @@ class RelativeStrengthIndexCalculator:
         self.windowSize = windowSize
         self.description = description
         
-    def calculate(self, sourceData: list[float]) -> IndicatorData:
+    def calculate(self, sourceData: np.ndarray) -> np.ndarray:
         
         length = len(sourceData)
         
@@ -23,7 +24,8 @@ class RelativeStrengthIndexCalculator:
         windowStart = 0
         windowEnd = self.windowSize
         
-        relativeStrengthIndexData = [None] * length
+        relativeStrengthIndexData = np.zeros(sourceData.shape)
+        relativeStrengthIndexData[0 : self.windowSize] = 50
         
         while windowEnd < length:
             
@@ -46,4 +48,4 @@ class RelativeStrengthIndexCalculator:
             windowStart += 1
             windowEnd += 1
             
-        return IndicatorData(self.description, relativeStrengthIndexData)
+        return relativeStrengthIndexData

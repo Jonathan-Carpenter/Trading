@@ -13,6 +13,7 @@ from Data.TradingDataClient import TradingDataClient
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
 from Model.Indicators.ExponentialMovingAverageCalculator import ExponentialMovingAverageCalculator
 from Model.Indicators.MovingAverageConvergenceDivergenceCalculator import MovingAverageConvergenceDivergenceCalculator
+from Model.Indicators.RelativeStrengthIndexCalculator import RelativeStrengthIndexCalculator
 from Model.Indicators.SimpleMovingAverageCalculator import SimpleMovingAverageCalculator
 from ModelInputDataProvider import ModelInputDataProvider
 
@@ -47,7 +48,7 @@ allTickerIds = dbClient.getAllDailyTickerSymbols()
 
 normalizer = tf.keras.layers.Normalization(axis=-1)
 
-if True:
+if False:
         
     print("\n###\nWARNING: TAKE A BACK-UP OF YOUR MODEL!\n###\n")
     print(f"This will begin training a NEW model. Any existing model file at {modelCheckpointLocation} and {modelSaveLocation} will be overwritten.")
@@ -70,7 +71,7 @@ if True:
     ])
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss='mean_squared_error')
         
 else:
@@ -88,7 +89,8 @@ inputs, labels, _, _ = ModelInputDataProvider(
         "Moving Average Convergence Divergence",
         ExponentialMovingAverageCalculator(12, "12 Day EMA"),
         ExponentialMovingAverageCalculator(26, "26 Day EMA"),
-        ExponentialMovingAverageCalculator(9, "9 Day EMA"))]
+        ExponentialMovingAverageCalculator(9, "9 Day EMA"))],
+    [RelativeStrengthIndexCalculator(14, "14 Day Relative Strength Index Indicator")]
     ).getData(
         tickerIds,
         startDate,
@@ -107,8 +109,8 @@ normalizer.mean.numpy()
 history = model.fit(
     trainingInputs,
     trainingLabels,
-    batch_size=128,
-    epochs=1000,
+    batch_size=16,
+    epochs=415,
     validation_data=(validationInputs, validationLabels),
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(

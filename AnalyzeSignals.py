@@ -32,6 +32,7 @@ from Model.Analysis.SimpleMarketTrackingAnalyzer import SimpleMarketTrackingAnal
 from Model.Signals.MovingAverageConvergenceDivergenceCrossoverSignalDetector import MovingAverageConvergenceDivergenceCrossoverSignalDetector
 from Model.Signals.NeuralNetworkPredictionSignalDetector import NeuralNetworkPredictionSignalDetector
 from Model.Signals.RelativeStrengthIndexThresholdSignalDetector import RelativeStrengthIndexThresholdSignalDetector
+from Model.Signals.TradingSignal import TradingSignal
 from ModelInputDataProvider import ModelInputDataProvider
 
 config = configparser.ConfigParser()
@@ -44,10 +45,10 @@ dbFileLocation: str = config['database']['DatabaseFileLocation']
 dbClient = TradingDataClient(dbFileLocation)
 dbClient.ensureSeeded()
 
-startDate = datetime.date.fromisoformat("2021-01-01")
-endDate = datetime.date.fromisoformat("2026-01-01")
+startDate = datetime.date.fromisoformat("2024-01-01")
+endDate = datetime.date.fromisoformat("2025-12-01")
 
-simulateBearishMarket = True
+simulateBearishMarket = False
 
 if simulateBearishMarket:
     startDate = datetime.date.fromisoformat("2024-12-01")
@@ -142,6 +143,8 @@ def printTop20Analyzers():
             
         print("")
 
+recentNeuralNetworkSignals: list[(str, TradingSignal)] = []
+
 for tickerId in tqdm(tickerIds):
     
     if not dbClient.isDailyTickerDataContiguousOverRange(tickerId, startDate, endDate):
@@ -186,12 +189,17 @@ for tickerId in tqdm(tickerIds):
                 "Moving Average Convergence Divergence",
                 ExponentialMovingAverageCalculator(12, "12 Day EMA"),
                 ExponentialMovingAverageCalculator(26, "26 Day EMA"),
-                ExponentialMovingAverageCalculator(9, "9 Day EMA"))]),
+                ExponentialMovingAverageCalculator(9, "9 Day EMA"))],
+            [RelativeStrengthIndexCalculator(14, "14 Day Relative Strength Index Indicator")]),
         neuralNetworkModel,
-        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 5.413),
+        NeuralNetworkPredictionSignalDetector(neuralNetworkModel, 4.85),
         NeuralNetworkPredictionVisualizer(f"{tickerId} Neural Network Prediction") if False else None)
     
     analysisResult = neuralNetworkAnalyzer.analyzeTicker(tickerId, startDate, endDate, 90, 10)
+    
+    for signal in analysisResult.actionedSignals:
+        if endDate - signal.date <= datetime.timedelta(days=10):
+            recentNeuralNetworkSignals.append((tickerId, signal))
     
     profitPerAnalyzer["Neural Network"] += analysisResult.totalProfit
         
@@ -200,7 +208,14 @@ for tickerId in tqdm(tickerIds):
     
     print("")
     
+recentNeuralNetworkSignals.sort(key=(lambda s: s[1].date), reverse=True)
+    
 print(f"\nAnalysis complete @ {datetime.datetime.now()}.")
 print(f"Amount invested per trade: £{amountInvestedPerTrade:.2f}")
 
 printTop20Analyzers()
+
+print("\nRecent neural network signals:")
+
+for ticker, signal in recentNeuralNetworkSignals:
+    print(f"[{ticker}] {signal}")

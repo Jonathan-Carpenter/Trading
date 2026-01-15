@@ -10,6 +10,7 @@ from Data.TradingDataClient import TradingDataClient
 from Model.Indicators.AverageCalculator import AverageCalculator
 from Model.Indicators.BollingerBandsCalculator import BollingerBandsCalculator
 from Model.Indicators.MovingAverageConvergenceDivergenceCalculator import MovingAverageConvergenceDivergenceCalculator
+from Model.Indicators.RelativeStrengthIndexCalculator import RelativeStrengthIndexCalculator
 
 class ModelInputDataProvider:
     
@@ -18,12 +19,14 @@ class ModelInputDataProvider:
         dataClient: TradingDataClient,
         averageCalculators: list[AverageCalculator],
         bandCalculators: list[BollingerBandsCalculator],
-        macdCalculators: list[MovingAverageConvergenceDivergenceCalculator]):
+        macdCalculators: list[MovingAverageConvergenceDivergenceCalculator],
+        rsiCalculators: list[RelativeStrengthIndexCalculator]):
         
         self.dataClient = dataClient
         self.averageCalculators = averageCalculators
         self.bandCalculators = bandCalculators
         self.macdCalculators = macdCalculators
+        self.rsiCalculators = rsiCalculators
         
     def getLabelOversamplingClass(self, label: float, oversamplingThresholds: list[float]):
         
@@ -56,12 +59,14 @@ class ModelInputDataProvider:
         
         columnsPerAverageCalculator = 1
         columnsPerBandCalculator = 3 # 3 = lower, average, upper
-        columnsPerMacdCalculator = 1
+        columnsPerMacdCalculator = 2
+        columnsPerRsiCalculator = 1
         
         calculatedDataColumns = (
             (len(self.averageCalculators) * columnsPerAverageCalculator) +
             (len(self.bandCalculators) * columnsPerBandCalculator) +
-            (len(self.macdCalculators) * columnsPerMacdCalculator))
+            (len(self.macdCalculators) * columnsPerMacdCalculator) +
+            (len(self.rsiCalculators) * columnsPerRsiCalculator))
         
         columnsPerRawTicker = 6 # 6 = date, open, close, high, low, volume
         columnsPerTickerWithData = columnsPerRawTicker + calculatedDataColumns
@@ -113,16 +118,21 @@ class ModelInputDataProvider:
                 columnIndex += columnsPerBandCalculator
                 
             for macdCalculator in self.macdCalculators:
-                macdSignalData = macdCalculator.calculate(tickerCloses)[ : , 3 ] # just take the signal; we already have EMAs
-                tickers[:, columnIndex] = macdSignalData
+                macdSignalData = macdCalculator.calculate(tickerCloses)[ : , 2 : ] # just take the divergence + signal; we already have EMAs
+                tickers[:, columnIndex : columnIndex + columnsPerMacdCalculator] = macdSignalData
                 columnIndex += columnsPerMacdCalculator
+                
+            for rsiCalculator in self.rsiCalculators:
+                rsiIndicatorData = rsiCalculator.calculate(tickerCloses)
+                tickers[:, columnIndex] = rsiIndicatorData
+                columnIndex += columnsPerRsiCalculator
             
             #    0       1       2        3       4      5         6             
-            #    date    open    close    high    low    volume    avg1    avg2    band1a    band1b    band1c    macd_sig1
-            #    .       .       .        .       .      .         .       .       .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .
-            #    .       .       .        .       .      .         .       .       .         .         .         .
+            #    date    open    close    high    low    volume    avg1    avg2    band1a    band1b    band1c    macd1_diverg    macd1_sig    rsi
+            #    .       .       .        .       .      .         .       .       .         .         .         .               .            .
+            #    .       .       .        .       .      .         .       .       .         .         .         .               .            .
+            #    .       .       .        .       .      .         .       .       .         .         .         .               .            .
+            #    .       .       .        .       .      .         .       .       .         .         .         .               .            .
             
             tickerBaseIndex = tickerIndex * perTickerInputCount
             
