@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Host.Integration.Tests/Host.Integration.Tests.csproj" Id="d41f0599-5fa8-439b-b8bd-5feaba64dbd0" />
+  <Project Path="Host/Host.csproj" />
+</Solution>

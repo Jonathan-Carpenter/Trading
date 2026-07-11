@@ -3,3 +3,8 @@ dev.ini
 **/__pycache__/**
 
 DataStorage/**
+
+**/bin/**
+**/obj/**
+**/.vs/**
+**DotSettings.user
