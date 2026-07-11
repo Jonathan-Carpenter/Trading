@@ -1,4 +1,7 @@
-﻿using Host.Fetch.Edgar;
+﻿using Common.Http;
+using Host.Fetch.Edgar;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Host.Integration.Tests.Fetch.Edgar;
 
@@ -9,7 +12,10 @@ internal sealed class CompanyInformationFetcherTests
     [SetUp]
     public void Setup()
     {
-        this.companyInformationFetcher = new CompanyInformationFetcher(new HttpClient());
+        this.companyInformationFetcher = new CompanyInformationFetcher(
+            new ThrottledHttpClient(new WrappedHttpClient(new HttpClient()), TimeSpan.FromSeconds(1)),
+            new WrappedHttpRequestFactory(),
+            new Mock<ILogger<CompanyInformationFetcher>>().Object);
     }
 
     [Test]
