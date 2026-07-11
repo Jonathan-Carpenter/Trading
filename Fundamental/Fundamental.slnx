@@ -1,4 +1,12 @@
 <Solution>
-  <Project Path="Host.Integration.Tests/Host.Integration.Tests.csproj" Id="d41f0599-5fa8-439b-b8bd-5feaba64dbd0" />
+  <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Integration/">
+    <Project Path="Host.Integration.Tests/Host.Integration.Tests.csproj" Id="d41f0599-5fa8-439b-b8bd-5feaba64dbd0" />
+  </Folder>
+  <Folder Name="/Tests/Unit/">
+    <Project Path="Common.Unit.Tests/Common.Unit.Tests.csproj" Id="e538a585-79da-4b92-9287-2307df92014d" />
+    <Project Path="Host.Unit.Tests/Host.Unit.Tests.csproj" Id="37d05b7b-d883-46f5-be9c-a488f8b9b037" />
+  </Folder>
+  <Project Path="Common/Common.csproj" Id="1cb0074d-cc86-47e6-a51b-c92ed9c31800" />
   <Project Path="Host/Host.csproj" />
 </Solution>
