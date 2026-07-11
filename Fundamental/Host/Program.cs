@@ -1,5 +1,6 @@
 ﻿using Common.Http;
 using Host.Fetch.Edgar;
+using Host.Model.Edgar;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
@@ -19,11 +20,13 @@ internal class Program
         var loggerFactory = new SerilogLoggerFactory(Log.Logger);
 
         var companyInformationFetcher = new CompanyInformationFetcher(
-            new WrappedHttpClient(new HttpClient()),
+            new ThrottledHttpClient(new WrappedHttpClient(new HttpClient()), TimeSpan.FromSeconds(1)),
             new WrappedHttpRequestFactory(),
             loggerFactory.CreateLogger<CompanyInformationFetcher>());
 
-        await companyInformationFetcher.FetchFactsAsync(CompanyCiks.AppleInc);
+        var facts = await companyInformationFetcher.FetchFactsAsync(CompanyCiks.AppleInc);
+
+        var returnOnAssets = new EdgarReturnOnAssetsCalculator().Calculate(facts.Facts.UsGaap);
 
         Console.ReadLine();
     }
