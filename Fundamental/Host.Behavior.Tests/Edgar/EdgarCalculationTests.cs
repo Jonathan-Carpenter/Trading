@@ -13,7 +13,8 @@ public class EdgarCalculationTests
     [SetUp]
     public async Task SetupAsync()
     {
-        var appleFactsJson = await File.ReadAllTextAsync("Edgar\\CIK0000320193.json");
+        var appleFactsPath = Path.Combine(AppContext.BaseDirectory, "Edgar", "CIK0000320193.json");
+        var appleFactsJson = await File.ReadAllTextAsync(appleFactsPath);
         var dummyHttpClient = new HttpClient(new StubHttpMessageHandler(appleFactsJson));
 
         this.companyInformationFetcher =
