@@ -7,6 +7,12 @@ namespace Host.Fetch.Edgar;
 
 internal sealed class CompanyInformationFetcher
 {
+    private static readonly JsonSerializerOptions jsonSerializerOptions = new(JsonSerializerOptions.Web)
+    {
+        RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true
+    };
+
     private readonly IWrappedHttpClient httpClient;
     private readonly IWrappedHttpRequestFactory httpRequestFactory;
     private readonly ILogger<CompanyInformationFetcher> logger;
@@ -21,43 +27,65 @@ internal sealed class CompanyInformationFetcher
         this.logger = logger;
     }
 
+    private const string CompanyTickersUrl = "https://www.sec.gov/files/company_tickers.json";
     private const string CompanyFactsUrlTemplate = "https://data.sec.gov/api/xbrl/companyfacts/CIK{0}.json";
 
-    public async Task<CompanyFactsResponse> FetchFactsAsync(string cik)
+    public async Task<IEnumerable<CompanyTicker>> GetAllCiksAsync()
+    {
+        var requestMessage = this.httpRequestFactory.Create(HttpMethod.Get, CompanyTickersUrl);
+
+        var response = await this.FetchAndWrapExceptions<IDictionary<string, CompanyTicker>>(requestMessage, "get all CIKs");
+
+        return response.Values.ToList();
+    }
+
+    public Task<CompanyFactsResponse> FetchFactsAsync(string cik)
     {
         var url = string.Format(CompanyFactsUrlTemplate, cik);
 
         var requestMessage = this.httpRequestFactory.Create(HttpMethod.Get, url);
-        requestMessage.AddHeader("User-Agent", "Fundamental/CompanyInformationFetcher");
-        requestMessage.AddHeader("Accept", "application/json");
+
+        return this.FetchAndWrapExceptions<CompanyFactsResponse>(requestMessage, $"fetch company facts for CIK {cik}");
+    }
+
+    private async Task<TResponse> FetchAndWrapExceptions<TResponse>(IWrappedHttpRequestMessage httpRequestMessage, string requestDescription)
+    {
+        httpRequestMessage.AddHeader("User-Agent", "Fundamental/CompanyInformationFetcher");
+        httpRequestMessage.AddHeader("Accept", "application/json");
 
         try
         {
-            using var response = await this.httpClient.SendAsync(requestMessage);
+            this.logger.LogDebug("Sending HTTP request message to {RequestDescription}.", requestDescription);
+
+            using var response = await this.httpClient.SendAsync(httpRequestMessage);
 
             response.EnsureSuccessStatusCode();
 
-            var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions.Web)
-            {
-                RespectRequiredConstructorParameters = true
-            };
+            this.logger.LogDebug(
+                "Reading response content after a successful response was received from request to {RequestDescription}.",
+                requestDescription);
 
-            var companyFactsResponse =
-                await response.ReadContentFromJsonAsync<CompanyFactsResponse>(jsonSerializerOptions);
+            var convertedResponse = await response.ReadContentFromJsonAsync<TResponse>(jsonSerializerOptions);
 
-            return companyFactsResponse;
+            return convertedResponse;
         }
         catch (HttpRequestException httpRequestException)
         {
             throw new DataFetchException(
-                $"Failed to fetch company facts for CIK {cik} as an error occurred during the request. See the inner exception for details.",
+                $"Failed to {requestDescription} as an error occurred during the request. See the inner exception for details.",
                 httpRequestException);
         }
         catch (OperationCanceledException operationCanceledException)
         {
             throw new DataFetchException(
-                $"Failed to fetch company facts for CIK {cik} as the operation was cancelled. See the inner exception for details.",
+                $"Failed to {requestDescription} as the operation was cancelled. See the inner exception for details.",
                 operationCanceledException);
+        }
+        catch (JsonException jsonException)
+        {
+            throw new DataFetchException(
+                $"Failed to {requestDescription} as the returned JSON was invalid. See the inner exception for details.",
+                jsonException);
         }
     }
 }

@@ -21,7 +21,7 @@ public sealed class WrappedHttpResponseMessage : IWrappedHttpResponseMessage
 
     public async Task<T> ReadContentFromJsonAsync<T>(JsonSerializerOptions options)
     {
-        var response = await this.httpResponseMessage.Content.ReadFromJsonAsync<T>();
+        var response = await this.httpResponseMessage.Content.ReadFromJsonAsync<T>(options);
 
         if (response is null)
         {

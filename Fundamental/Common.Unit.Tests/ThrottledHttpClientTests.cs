@@ -5,7 +5,7 @@ namespace Common.Unit.Tests;
 
 public class ThrottledHttpClientTests
 {
-    private static readonly TimeSpan DummyMinTimeBetweenRequests = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan DummyMinTimeBetweenRequests = TimeSpan.FromMilliseconds(100);
 
     private Mock<IWrappedHttpClient> mockHttpClient;
 

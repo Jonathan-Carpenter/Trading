@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Behavior/">
+    <Project Path="Host.Behavior.Tests/Host.Behavior.Tests.csproj" Id="a50de4b9-50f6-4d49-8b42-dae97660b3a1" />
+  </Folder>
   <Folder Name="/Tests/Integration/">
     <Project Path="Host.Integration.Tests/Host.Integration.Tests.csproj" Id="d41f0599-5fa8-439b-b8bd-5feaba64dbd0" />
   </Folder>

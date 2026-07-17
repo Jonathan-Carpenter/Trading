@@ -38,7 +38,7 @@ internal sealed class EdgarReturnOnAssetsCalculator : IEdgarReturnOnAssetsCalcul
         return new ReturnOnAssets(returnOnAssetsSeries);
     }
 
-    private static Dictionary<DateOnly, CompanyFactUnit> GetYearEndAssets(UsGaapFacts facts) =>
+    private static Dictionary<DateOnly, CompanyFactEndUnit> GetYearEndAssets(UsGaapFacts facts) =>
         facts.Assets.Units.Usd
             .Where(u => u.IsAnnualFiling)
             .GroupBy(u => u.End)
@@ -46,7 +46,7 @@ internal sealed class EdgarReturnOnAssetsCalculator : IEdgarReturnOnAssetsCalcul
             .Select(g => g.First())
             .ToDictionary(u => u.End, u => u);
 
-    private static Dictionary<DateOnly, CompanyFactUnit> GetYearEndNetIncome(UsGaapFacts facts) =>
+    private static Dictionary<DateOnly, CompanyFactRangeUnit> GetYearEndNetIncome(UsGaapFacts facts) =>
         facts.NetIncomeLoss.Units.Usd
             .Where(u => u.IsAnnualFiling && u.IsFullYearFiling)
             .GroupBy(u => u.End)

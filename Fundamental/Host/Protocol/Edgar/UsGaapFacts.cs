@@ -1,8 +1,8 @@
 ﻿namespace Host.Protocol.Edgar;
 
-internal sealed class UsGaapFacts(CompanyFact assets, CompanyFact netIncomeLoss)
+internal sealed class UsGaapFacts(CompanyFact<CompanyFactEndUnit> assets, CompanyFact<CompanyFactRangeUnit> netIncomeLoss)
 {
-    public CompanyFact Assets { get; } = assets;
+    public CompanyFact<CompanyFactEndUnit> Assets { get; } = assets;
 
-    public CompanyFact NetIncomeLoss { get; } = netIncomeLoss;
+    public CompanyFact<CompanyFactRangeUnit> NetIncomeLoss { get; } = netIncomeLoss;
 }
