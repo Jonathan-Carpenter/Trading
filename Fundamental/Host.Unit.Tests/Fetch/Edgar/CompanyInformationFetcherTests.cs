@@ -8,34 +8,34 @@ using System.Text.Json;
 
 namespace Host.Unit.Tests.Fetch.Edgar;
 
-public class Tests
+public class CompanyInformationFetcherTests
 {
     private const string DummyCik = "2468";
+
+    private static readonly IDictionary<string, CompanyTicker> DummyCompanyCiksResponse = new Dictionary<string, CompanyTicker> { {"0", new CompanyTicker(123, "dummy ticker", "dummy title") } };
 
     private static readonly CompanyFactsResponse DummyCompanyFactsResponse = new(
         5,
         "dummy entity",
         new CompanyFacts(
             new UsGaapFacts(
-                new CompanyFact(
+                new CompanyFact<CompanyFactEndUnit>(
                     "dummy label",
                     "dummy description", 
-                    new CompanyFactUnits(
-                        new List<CompanyFactUnit> 
+                    new CompanyFactUnits<CompanyFactEndUnit>(
+                        new List<CompanyFactEndUnit> 
                         { 
-                            new(
-                                null,
-                                new DateOnly(2026, 07, 10),
+                            new(new DateOnly(2026, 07, 15),
                                 12345,
                                 567,
                                 "dummy fp",
                                 "10-K",
                                 new DateOnly(2026, 07, 11))
                         })),
-                new CompanyFact(
+                new CompanyFact<CompanyFactRangeUnit>(
                     "dummy label 2",
                     "dummy description 2",
-                    new CompanyFactUnits([])))));
+                    new CompanyFactUnits<CompanyFactRangeUnit>([])))));
 
     private Mock<IWrappedHttpClient> mockHttpClient;
     private Mock<IWrappedHttpRequestFactory> mockHttpRequestFactory;
@@ -51,6 +51,15 @@ public class Tests
         {
             yield return new TestCaseData(new HttpRequestException());
             yield return new TestCaseData(new OperationCanceledException());
+        }
+    }
+
+    private static IEnumerable<TestCaseData> ReadResponseExceptionTestCases
+    {
+        get
+        {
+            yield return new TestCaseData(new OperationCanceledException());
+            yield return new TestCaseData(new JsonException());
         }
     }
 
@@ -75,10 +84,89 @@ public class Tests
             .Setup(hr => hr.ReadContentFromJsonAsync<CompanyFactsResponse>(It.IsAny<JsonSerializerOptions>()))
             .ReturnsAsync(DummyCompanyFactsResponse);
 
+        this.mockHttpResponse
+            .Setup(hr => hr.ReadContentFromJsonAsync<IDictionary<string, CompanyTicker>>(It.IsAny<JsonSerializerOptions>()))
+            .ReturnsAsync(DummyCompanyCiksResponse);
+
         this.companyInformationFetcher = new CompanyInformationFetcher(
             this.mockHttpClient.Object,
             this.mockHttpRequestFactory.Object,
             new Mock<ILogger<CompanyInformationFetcher>>().Object);
+    }
+
+    [Test]
+    public async Task GettingCiksCreatesGetRequestForCorrectUrl()
+    {
+        await this.companyInformationFetcher.GetAllCiksAsync();
+
+        this.mockHttpRequestFactory.Verify(
+            hrf => hrf.Create(HttpMethod.Get, "https://www.sec.gov/files/company_tickers.json"),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task GettingCiksSetsRequestHeaders()
+    {
+        await this.companyInformationFetcher.GetAllCiksAsync();
+
+        this.mockHttpRequest.Verify(
+            hr => hr.AddHeader("User-Agent", "Fundamental/CompanyInformationFetcher"),
+            Times.Once);
+
+        this.mockHttpRequest.Verify(
+            hr => hr.AddHeader("Accept", "application/json"),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task GettingCiksSendsRequestAndReturnsResult()
+    {
+        var response = await this.companyInformationFetcher.GetAllCiksAsync();
+
+        this.mockHttpClient.Verify(hc => hc.SendAsync(this.mockHttpRequest.Object), Times.Once);
+
+        Assert.That(response, Is.EqualTo(DummyCompanyCiksResponse.Values));
+    }
+
+    [Test]
+    public async Task GettingCiksDeserializesResponseWithCaseInsensitivityAndRequiredConstructorAndRespectNullabilityParams()
+    {
+        await this.companyInformationFetcher.GetAllCiksAsync();
+
+        this.mockHttpResponse.Verify(hr =>
+            hr.ReadContentFromJsonAsync<IDictionary<string, CompanyTicker>>(It.Is<JsonSerializerOptions>(options =>
+                options.RespectRequiredConstructorParameters && options.PropertyNameCaseInsensitive && options.RespectNullableAnnotations)));
+    }
+
+    [Test]
+    [TestCaseSource(nameof(RequestExceptionTestCases))]
+    public void GettingCiksWhenSendingRequestFailsThrowsDataFetchException(Exception requestException)
+    {
+        this.mockHttpClient.Setup(hc => hc.SendAsync(this.mockHttpRequest.Object)).ThrowsAsync(requestException);
+
+        Assert.ThrowsAsync<DataFetchException>(() => this.companyInformationFetcher.GetAllCiksAsync());
+    }
+
+    [Test]
+    public void GettingCiksWhenEnsuringSuccessStatusCodeFailsThrowsDataFetchException()
+    {
+        this.mockHttpResponse.Setup(hr => hr.EnsureSuccessStatusCode()).Throws(new HttpRequestException());
+
+        Assert.ThrowsAsync<DataFetchException>(() => this.companyInformationFetcher.GetAllCiksAsync());
+    }
+
+    [Test]
+    [TestCaseSource(nameof(ReadResponseExceptionTestCases))]
+    public void GettingCiksWhenReadingResponseFailsThrowsDataFetchException(Exception exception)
+    {
+        this.mockHttpResponse
+            .Setup(hr => hr.ReadContentFromJsonAsync<IDictionary<string, CompanyTicker>>(It.IsAny<JsonSerializerOptions>()))
+            .ThrowsAsync(exception);
+
+        var dataFetchException = Assert.ThrowsAsync<DataFetchException>(() => this.companyInformationFetcher.GetAllCiksAsync());
+
+        Assert.That(dataFetchException, Is.Not.Null);
+        Assert.That(dataFetchException.InnerException, Is.EqualTo(exception));
     }
 
     [Test]
@@ -116,13 +204,13 @@ public class Tests
     }
 
     [Test]
-    public async Task FetchingFactsDeserializesResponseWithCaseInsensitivityAndRequiredConstructorParams()
+    public async Task FetchingFactsDeserializesResponseWithCaseInsensitivityAndRequiredConstructorAndRespectNullabilityParams()
     {
         await this.companyInformationFetcher.FetchFactsAsync(DummyCik);
 
         this.mockHttpResponse.Verify(hr =>
             hr.ReadContentFromJsonAsync<CompanyFactsResponse>(It.Is<JsonSerializerOptions>(options =>
-                options.RespectRequiredConstructorParameters && options.PropertyNameCaseInsensitive)));
+                options.RespectRequiredConstructorParameters && options.PropertyNameCaseInsensitive && options.RespectNullableAnnotations)));
     }
 
     [Test]
@@ -143,12 +231,16 @@ public class Tests
     }
 
     [Test]
-    public void FetchingFactsWhenReadingResponseFailsThrowsDataFetchException()
+    [TestCaseSource(nameof(ReadResponseExceptionTestCases))]
+    public void FetchingFactsWhenReadingResponseFailsThrowsDataFetchException(Exception exception)
     {
         this.mockHttpResponse
             .Setup(hr => hr.ReadContentFromJsonAsync<CompanyFactsResponse>(It.IsAny<JsonSerializerOptions>()))
-            .ThrowsAsync(new OperationCanceledException());
+            .ThrowsAsync(exception);
 
-        Assert.ThrowsAsync<DataFetchException>(() => this.companyInformationFetcher.FetchFactsAsync(DummyCik));
+        var dataFetchException = Assert.ThrowsAsync<DataFetchException>(() => this.companyInformationFetcher.FetchFactsAsync(DummyCik));
+
+        Assert.That(dataFetchException, Is.Not.Null);
+        Assert.That(dataFetchException.InnerException, Is.EqualTo(exception));
     }
 }

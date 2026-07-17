@@ -9,15 +9,14 @@ namespace Host.Unit.Tests.Model.Edgar;
 internal sealed class EdgarReturnOnAssetsCalculatorTests
 {
     private static readonly UsGaapFacts DummyUsGaapFacts = new(
-        new CompanyFact(
+        new CompanyFact<CompanyFactEndUnit>(
             "dummy assets",
             "dummy desc", 
-            new CompanyFactUnits(
-                new List<CompanyFactUnit>
+            new CompanyFactUnits<CompanyFactEndUnit>(
+                new List<CompanyFactEndUnit>
                 {
                     // ROA 1: 2026-06-01 end; earliest filed (preferred)
                     new(
-                        null,
                         new DateOnly(2020, 6, 1),
                         500,
                         null,
@@ -26,7 +25,6 @@ internal sealed class EdgarReturnOnAssetsCalculatorTests
                         new DateOnly(2020, 6, 1)),
                     // ROA 1: 2026-06-01 end; filed later with different value (not preferred)
                     new(
-                        null,
                         new DateOnly(2020, 6, 1),
                         600,
                         null,
@@ -36,7 +34,6 @@ internal sealed class EdgarReturnOnAssetsCalculatorTests
 
                     // ROA 2.
                     new(
-                        null,
                         new DateOnly(2021, 6, 1),
                         1000,
                         null,
@@ -44,11 +41,11 @@ internal sealed class EdgarReturnOnAssetsCalculatorTests
                         "10-K",
                         new DateOnly(2021, 7, 6))
                 })),
-        new CompanyFact(
+        new CompanyFact<CompanyFactRangeUnit>(
             "dummy net income",
             "dummy desc",
-            new CompanyFactUnits(
-                new List<CompanyFactUnit>
+            new CompanyFactUnits<CompanyFactRangeUnit>(
+                new List<CompanyFactRangeUnit>
                 {
                     // ROA 1: 2026-06-01 end; earliest filed (preferred)
                     new(
